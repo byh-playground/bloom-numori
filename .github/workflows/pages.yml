@@ -34,7 +34,7 @@ jobs:
                   npx --yes ajv-cli@5.0.0 validate --spec=draft2020 \
                       -s "$RUNNER_TEMP/bloom-game.schema.json" \
                       -d bloom-game.json -d "$RUNNER_TEMP/numori-pages/bloom-game.json"
-            - uses: actions/upload-pages-artifact@v4
+            - uses: actions/upload-pages-artifact@v5.0.0
               if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
               with:
                   path: ${{ runner.temp }}/numori-pages
@@ -51,7 +51,7 @@ jobs:
             name: github-pages
             url: ${{ steps.publish.outputs.page_url }}
         steps:
-            - uses: actions/configure-pages@v5
+            - uses: actions/configure-pages@v6.0.0
             - name: Deploy original source
               id: publish
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5.0.1
