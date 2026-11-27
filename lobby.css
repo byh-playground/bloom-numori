@@ -1,0 +1,115 @@
+.title-play {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
+}
+.title-play .battle-launch,
+.title-play .tutorial-launch,
+.versus-launch {
+    min-height: 44px;
+    padding: 7px 9px;
+    white-space: nowrap;
+    text-align: center;
+    font-size: clamp(13px, 1.2vw, 17px);
+}
+.title-play .battle-launch i {
+    display: none;
+}
+.versus-launch {
+    border: 2px solid var(--cover-ink);
+    border-radius: 8px;
+    background: #b2e4d2;
+    color: #204536;
+    font-weight: 850;
+}
+#lobby {
+    width: min(360px, calc(100vw - 28px));
+}
+#lobby header {
+    align-items: center;
+}
+#lobby button:not(.lobby-close),
+#lobby input {
+    min-height: 44px;
+    border-radius: 7px;
+    font: inherit;
+}
+#lobby button:not(.lobby-close) {
+    padding: 6px 13px;
+    font-weight: 750;
+}
+#lobby input {
+    min-width: 0;
+    width: 100%;
+    border: 1px solid #8b9c8e;
+    background: white;
+    color: #204536;
+    padding: 7px 12px;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+}
+#lobby input[aria-invalid='true'] {
+    border: 2px solid #ab4838;
+}
+#lobby label {
+    display: block;
+    margin: 0 0 6px;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 750;
+}
+.lobby-primary {
+    width: 100%;
+    border: 2px solid #264c39;
+    background: #24583f;
+    color: #fffae8;
+}
+.lobby-secondary {
+    color: #274b37;
+    border: 1px solid #91a696;
+    background: #e5efde;
+}
+#joinForm {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #c4d0be;
+}
+.lobby-join-row,
+.lobby-code-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+}
+#joinCode::placeholder {
+    font-size: 15px;
+    color: #637467;
+}
+#lobby #lobbyCode {
+    font-size: 31px;
+    font-weight: 850;
+    letter-spacing: 0.18em;
+}
+#hostCode {
+    margin-bottom: 12px;
+}
+#cancelRoom {
+    width: 100%;
+}
+#lobbyMessage {
+    margin: 10px 0 0;
+    min-height: 1.45em;
+    font-size: 13px;
+}
+#lobbyMessage:empty {
+    min-height: 0;
+    margin: 0;
+}
+#lobbyMessage.is-error {
+    color: #953d30;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .title-play .battle-launch,
+    .title-play .tutorial-launch,
+    .versus-launch {
+        min-height: 37px;
+        padding-block: 4px;
+    }
+}

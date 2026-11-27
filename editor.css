@@ -1,0 +1,1044 @@
+.numori-editor {
+    --ne-ink: #182d23;
+    --ne-muted: #4d6054;
+    --ne-line: #bcc8ba;
+    --ne-paper: #fffef8;
+    --ne-green: #1d4a33;
+    --ne-pale: #e2efd9;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    color: var(--ne-ink);
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.35;
+    text-align: left;
+    container-type: inline-size;
+}
+.numori-editor * {
+    box-sizing: border-box;
+}
+.numori-editor button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    margin: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    letter-spacing: normal;
+}
+.numori-editor button:focus-visible {
+    outline: 3px solid #a25707;
+    outline-offset: 2px;
+}
+.numori-editor button:disabled {
+    cursor: default;
+    opacity: 1;
+}
+.ne-work,
+.ne-palette,
+.ne-deploy,
+.ne-section {
+    min-width: 0;
+}
+.ne-score {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--ne-paper);
+    border: 1px solid var(--ne-green);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.ne-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+.ne-pair > div {
+    display: grid;
+    gap: 2px;
+    align-content: start;
+    min-width: 0;
+    padding: 8px 13px 6px;
+}
+.ne-goal-cell {
+    background: var(--ne-green);
+    color: white;
+}
+.ne-result-cell {
+    background: var(--ne-paper);
+    color: var(--ne-ink);
+}
+.ne-pair span {
+    font-size: 12px;
+    font-weight: 700;
+}
+.ne-pair strong {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font:
+        800 clamp(28px, 8cqw, 38px)/1.13 system-ui,
+        sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.055em;
+}
+.ne-score.is-qualified .ne-result-cell {
+    background: #ddeed1;
+}
+.ne-rule {
+    padding: 5px 13px;
+    border-top: 1px solid var(--ne-line);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.4;
+    color: #304334;
+}
+.ne-kicker,
+.ne-heading,
+.ne-foot,
+.ne-toolbar,
+.ne-actions {
+    display: flex;
+    align-items: center;
+}
+.ne-kicker,
+.ne-heading,
+.ne-foot {
+    justify-content: space-between;
+    gap: 6px;
+}
+.ne-kicker,
+.ne-heading {
+    margin-bottom: 5px;
+}
+.ne-kicker > span,
+.ne-group {
+    white-space: nowrap;
+    font-weight: 800;
+    font-size: 14px;
+}
+.ne-toolbar,
+.ne-actions,
+.ne-shelf {
+    gap: 5px;
+}
+.ne-toolbar button,
+.ne-actions button,
+.ne-shelf button {
+    min-height: 28px;
+    padding: 3px 7px;
+    color: #334e3c;
+    border: 1px solid #acbaaa;
+    background: var(--ne-paper);
+    font-size: 12px;
+    font-weight: 650;
+    white-space: nowrap;
+}
+.ne-toolbar button:disabled {
+    color: #748073;
+    background: #eeefe7;
+    border-color: #cdd3c5;
+}
+.ne-sheet {
+    background: var(--ne-paper);
+    border: 1px solid var(--ne-line);
+    border-radius: 5px;
+    padding: 5px 10px;
+}
+.ne-expression {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 21px;
+    line-height: 1.15;
+    scrollbar-width: thin;
+}
+.ne-placeholder {
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.45;
+    font-weight: 500;
+    color: #4f6354;
+}
+.numori-editor .ne-token {
+    flex-shrink: 0;
+    min-height: 32px;
+    padding: 2px 4px;
+    color: #163e2d;
+    font-family: Georgia, serif;
+    font-size: inherit;
+    font-weight: 700;
+    line-height: 1;
+}
+.numori-editor .ne-token.ne-op {
+    color: #62406e;
+}
+.numori-editor .ne-token.ne-hole {
+    border: 1px dashed #536f59;
+    min-width: 24px;
+}
+.numori-editor .ne-token.is-selected,
+.numori-editor .ne-bar.is-selected {
+    background: #f7d888;
+    outline: 1px solid #91691c;
+}
+.ne-frac {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+}
+.ne-frac {
+    align-items: stretch;
+    flex-direction: column;
+    font-size: 0.85em;
+    min-width: 24px;
+}
+.ne-frac > span {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+.numori-editor .ne-bar {
+    height: 10px;
+    padding: 4px 0;
+}
+.ne-bar::before {
+    display: block;
+    content: '';
+    height: 2px;
+    background: #62406e;
+}
+.ne-foot {
+    min-width: 0;
+}
+.ne-context,
+.ne-preview,
+.ne-notice {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--ne-muted);
+}
+.ne-shelf {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-top: 5px;
+}
+.ne-shelf:empty {
+    display: none;
+}
+.ne-shelf .ne-bank {
+    background: #dbeacf;
+    border-color: #859e77;
+    color: #27472c;
+}
+.ne-palette {
+    display: grid;
+    gap: 10px;
+}
+.ne-numbers,
+.ne-operators {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.ne-operators {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.numori-editor .ne-key {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 42px;
+    padding: 3px 7px;
+    background: var(--ne-pale);
+    border: 1px solid #8da58a;
+    color: #1c442d;
+    font-variant-numeric: tabular-nums;
+}
+.ne-key b {
+    min-width: 0;
+    font:
+        750 20px/1.05 system-ui,
+        sans-serif;
+    letter-spacing: -0.05em;
+}
+.ne-key small {
+    color: #415b49;
+    font-size: 11px;
+    line-height: 1.1;
+    font-weight: 550;
+}
+.ne-operators .ne-key {
+    background: #eee5f0;
+    border-color: #b3a0b9;
+    color: #512b5a;
+}
+.ne-operators .ne-key small {
+    color: #624d66;
+}
+.numori-editor .ne-key:disabled {
+    background: #f0f1e9;
+    border-color: #d0d5c9;
+    color: #6c786c;
+}
+.numori-editor .ne-key:disabled small {
+    color: #637062;
+}
+.numori-editor button:not(:disabled):active {
+    background-color: #f4d48f;
+    color: #253629;
+}
+.ne-deploy {
+    display: grid;
+    gap: 5px;
+}
+.ne-preview {
+    color: #774014;
+}
+.numori-editor .ne-produce {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 45px;
+    padding: 6px 12px;
+    background: var(--ne-green);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+}
+.ne-produce b {
+    font:
+        bold 24px/1 system-ui,
+        sans-serif;
+}
+.ne-produce small {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 600;
+}
+.numori-editor .ne-produce:disabled {
+    background: #dce3d5;
+    color: #506052;
+}
+.ne-notice {
+    color: #75401a;
+}
+.ne-notice:empty,
+.ne-preview:empty {
+    display: none;
+}
+@container (max-width: 400px) {
+    .numori-editor .ne-key {
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: 3px 2px;
+    }
+    .ne-key b {
+        font-size: 18px;
+    }
+    .ne-key small {
+        font-size: 11px;
+    }
+}
+@media (pointer: coarse) {
+    .numori-editor .ne-key,
+    .numori-editor .ne-produce {
+        min-height: 44px;
+    }
+    .ne-toolbar button,
+    .ne-shelf button,
+    .ne-actions button {
+        min-height: 32px;
+    }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .ne-pair > div {
+        padding-block: 4px;
+    }
+    .ne-pair strong {
+        font-size: 25px;
+    }
+    .ne-rule {
+        padding-block: 3px;
+    }
+}
+.numori-editor [hidden] {
+    display: none !important;
+}
+.ne-delta {
+    padding: 0 13px 5px;
+    font-size: 14px;
+    font-weight: 750;
+    color: #244c35;
+}
+.ne-delta:empty {
+    display: none;
+}
+.ne-score.is-qualified .ne-delta {
+    color: #19552c;
+}
+.ne-unit {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 2px 13px 2px 8px;
+    border-top: 1px solid var(--ne-line);
+    background: #edf4e7;
+}
+.ne-unit canvas {
+    width: 38px;
+    height: 38px;
+    flex: none;
+}
+.ne-unit > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 7px;
+}
+.ne-unit-name {
+    font-weight: 800;
+    font-size: 15px;
+}
+.ne-unit-reason {
+    color: #435b49;
+    font-size: 12px;
+}
+.ne-unit-count {
+    white-space: nowrap;
+    margin-left: auto;
+    font:
+        750 16px/1.2 system-ui,
+        sans-serif;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .ne-unit {
+        min-height: 30px;
+    }
+    .ne-unit canvas {
+        width: 27px;
+        height: 27px;
+    }
+}
+.ne-pair {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+}
+.ne-pair .ne-dispatch-cell {
+    background: #f0eee6;
+    color: #504d43;
+    border-left: 2px solid #babaac;
+}
+.ne-pair .ne-dispatch-cell.ready {
+    background: #ffdf93;
+    color: #452e0e;
+    border-color: #cc8b31;
+}
+.ne-pair .ne-dispatch-count {
+    margin: 0;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.ne-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ne-range {
+    font-weight: 750;
+    white-space: nowrap;
+}
+.ne-tiers {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+.ne-tiers > span {
+    white-space: nowrap;
+}
+.ne-tiers small {
+    font: inherit;
+}
+.ne-keyboard {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2.5fr);
+    gap: 4px 7px;
+    align-items: stretch;
+}
+.ne-palette,
+.ne-palette .ne-section,
+.ne-deploy {
+    display: contents;
+}
+.ne-numbers {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+}
+.ne-basic-operators {
+    grid-column: 2;
+    grid-row: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+}
+.ne-deploy .ne-produce {
+    grid-column: 2;
+    grid-row: 3;
+}
+.ne-keyboard .ne-heading {
+    margin: 0;
+    min-width: 0;
+}
+.ne-section:first-child .ne-heading {
+    grid-column: 1;
+    grid-row: 1;
+}
+.ne-section:last-child .ne-heading {
+    grid-column: 2;
+    grid-row: 1;
+}
+.ne-preview,
+.ne-notice {
+    grid-column: 1 / -1;
+}
+.ne-foot {
+    justify-content: flex-start;
+    min-width: 0;
+}
+.ne-foot .ne-actions {
+    margin-left: auto;
+}
+.ne-foot .ne-shelf {
+    min-width: 0;
+    padding: 0;
+}
+.ne-produce-label {
+    line-height: 1.15;
+}
+.ne-keyboard .ne-produce {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px 5px;
+}
+.ne-keyboard .ne-produce small {
+    margin-left: 0;
+}
+@media (max-width: 680px) and (orientation: portrait),
+    (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+    .numori-editor {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2.6fr);
+        grid-template-rows: 66px 44px 28px 90px 44px;
+        gap: 3px 5px;
+    }
+    .ne-keyboard,
+    .ne-sheet,
+    .ne-work {
+        display: contents;
+    }
+    .ne-score {
+        position: relative;
+        inset: auto;
+        z-index: auto;
+        grid-column: 1/-1;
+        grid-row: 1;
+        display: grid;
+        grid-template-rows: 40px 24px;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+    }
+    .ne-pair {
+        grid-row: 1;
+        grid-column: 1;
+        align-self: stretch;
+    }
+    .ne-pair > div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2px;
+        padding: 1px 5px;
+    }
+    .ne-pair span {
+        font-size: 11px;
+        line-height: 1.12;
+        font-weight: 650;
+    }
+    .ne-pair strong {
+        font-size: 23px;
+        line-height: 1.04;
+        letter-spacing: -0.06em;
+        white-space: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .ne-pair .ne-dispatch-count {
+        font-size: 21px;
+    }
+    .ne-rule,
+    .ne-delta {
+        grid-row: 2;
+        grid-column: 1;
+        margin: 0;
+        padding: 0 5px;
+        border: 0;
+        font-size: 11px;
+        line-height: 12px;
+        color: var(--ne-ink);
+    }
+    .ne-rule,
+    .ne-tiers {
+        gap: 5px;
+    }
+    .ne-score:has(.ne-delta:not(:empty)) .ne-rule {
+        display: none;
+    }
+    .ne-score:has(.ne-unit:not([hidden])) .ne-delta {
+        margin-right: 41%;
+    }
+    .ne-unit {
+        grid-area: 2/1;
+        justify-self: end;
+        height: 24px;
+        min-height: 0;
+        max-width: 41%;
+        overflow: hidden;
+        padding: 0 4px;
+        gap: 2px;
+        border: 0;
+    }
+    .ne-unit canvas {
+        width: 22px;
+        height: 22px;
+    }
+    .ne-unit > div {
+        min-width: 0;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 3px;
+    }
+    .ne-unit-name {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .ne-unit-reason {
+        font-size: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .ne-expression {
+        grid-row: 2;
+        grid-column: 1;
+        height: 44px;
+        min-height: 0;
+        min-width: 0;
+        overflow: auto;
+        padding: 0 5px;
+        border: 1px solid var(--ne-line);
+        border-radius: 4px;
+        background: var(--ne-paper);
+        font-size: 19px;
+    }
+    .ne-frac .ne-token {
+        min-height: 14px;
+        padding-block: 0;
+    }
+    .ne-frac .ne-bar {
+        height: 7px;
+        padding: 2px 0;
+    }
+    .ne-kicker {
+        grid-row: 2;
+        grid-column: 2;
+        margin: 0;
+        justify-content: flex-end;
+    }
+    .ne-kicker > span {
+        display: none;
+    }
+    .ne-toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        width: 100%;
+    }
+    .ne-toolbar button {
+        min-width: 0;
+        height: 44px;
+        padding: 1px 2px;
+        font-size: 11px;
+    }
+    .ne-foot {
+        grid-row: 3;
+        grid-column: 1/-1;
+        margin-right: 75px;
+        align-self: center;
+        min-width: 0;
+        gap: 3px;
+        z-index: 1;
+    }
+    .ne-context {
+        font-size: 11px;
+        line-height: 12px;
+    }
+    .ne-actions {
+        flex: none;
+        gap: 2px;
+    }
+    .ne-actions button,
+    .ne-shelf button {
+        min-height: 26px;
+        font-size: 11px;
+        padding: 1px 4px;
+    }
+    .ne-shelf {
+        overflow-x: auto;
+    }
+    .ne-section:first-child .ne-heading {
+        display: none;
+    }
+    .ne-section:last-child .ne-heading {
+        display: none;
+    }
+    .ne-numbers {
+        grid-row: 4/6;
+        grid-column: 1;
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        max-height: none;
+    }
+    .ne-basic-operators {
+        grid-row: 4;
+        grid-column: 2;
+        gap: 2px;
+    }
+    .numori-editor .ne-key {
+        min-height: 44px;
+        padding: 2px;
+        flex-direction: row;
+        justify-content: center;
+        gap: 5px;
+    }
+    .ne-key b {
+        font-size: 19px;
+    }
+    .ne-key small {
+        font-size: 10px;
+    }
+    .ne-deploy .ne-produce {
+        grid-row: 5;
+        grid-column: 2;
+        min-height: 44px;
+        height: 44px;
+        padding: 1px 5px;
+        gap: 0 4px;
+    }
+    .ne-produce b {
+        font:
+            700 17px/1 system-ui,
+            sans-serif;
+    }
+    .ne-produce-label {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .ne-produce small {
+        font-size: 10px;
+    }
+    .ne-preview,
+    .ne-notice {
+        grid-area: 1/1/2/-1;
+        z-index: 2;
+        align-self: end;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        column-gap: 2px;
+        min-height: 24px;
+        margin: 0 1px 1px;
+        padding: 0 4px;
+        border-radius: 0 0 5px 5px;
+        background: var(--ne-paper);
+        color: #69401e;
+        font-size: 11px;
+        line-height: 12px;
+    }
+    .ne-preview:empty,
+    .ne-notice:empty {
+        display: none;
+    }
+    .ne-deploy:has(.ne-preview:not(:empty)) .ne-notice {
+        display: none;
+    }
+}
+@media (max-width: 680px) and (orientation: portrait),
+    (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+    .ne-pair > div {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 14px 22px;
+        align-content: center;
+        align-items: center;
+        justify-items: start;
+        gap: 0;
+        padding: 1px 6px;
+    }
+    .ne-pair span {
+        white-space: nowrap;
+    }
+    .ne-pair strong {
+        font-size: 21px;
+    }
+    .ne-toolbar button {
+        padding-inline: 0;
+        white-space: nowrap;
+    }
+    .numori-editor .ne-keyboard .ne-produce {
+        display: grid;
+        grid-template-columns: 15px max-content;
+        grid-template-rows: 16px 12px;
+        align-content: center;
+        justify-content: center;
+        align-items: center;
+        justify-items: start;
+        gap: 1px 6px;
+    }
+    .ne-produce b {
+        grid-area: 1/1/3/2;
+    }
+    .ne-produce-label {
+        grid-area: 1/2;
+    }
+    .ne-produce small {
+        grid-area: 2/2;
+        font-weight: 500;
+    }
+}
+@media (min-width: 1001px), (min-width: 681px) and (min-height: 501px) {
+    .ne-score {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 64px 36px;
+        align-items: center;
+    }
+    .ne-pair {
+        grid-area: 1/1;
+        align-self: stretch;
+    }
+    .ne-rule,
+    .ne-delta {
+        grid-area: 2/1;
+        font-size: 12px;
+        border: 0;
+    }
+    .ne-score:has(.ne-delta:not(:empty)) .ne-rule {
+        display: none;
+    }
+    .ne-score:has(.ne-unit:not([hidden])) .ne-delta {
+        margin-right: 42%;
+    }
+    .ne-unit {
+        grid-area: 2/1;
+        justify-self: end;
+        max-width: 42%;
+        height: 34px;
+        min-height: 0;
+        border: 0;
+        padding: 0 6px;
+    }
+    .ne-unit canvas {
+        width: 30px;
+        height: 30px;
+    }
+    .ne-unit > div {
+        gap: 0 4px;
+    }
+    .ne-unit-reason {
+        font-size: 10px;
+    }
+    .ne-expression {
+        height: 48px;
+        overflow: auto;
+    }
+    .ne-foot {
+        min-height: 30px;
+        height: 30px;
+    }
+    .ne-frac .ne-token {
+        min-height: 16px;
+    }
+    .ne-keyboard {
+        grid-template-rows: auto 96px 46px;
+    }
+}
+.ne-bank-label {
+    flex: none;
+    color: var(--ne-muted);
+    font-weight: 650;
+    font-size: 11px;
+}
+@media (max-width: 680px) and (orientation: portrait),
+    (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+    .numori-editor {
+        grid-template-rows: 66px 44px 90px 44px;
+    }
+    .ne-expression {
+        grid-column: 1 / -1;
+        margin-right: 152px;
+    }
+    .ne-kicker {
+        grid-column: 1 / -1;
+        justify-self: end;
+        width: 148px;
+    }
+    .ne-toolbar {
+        grid-template-columns: 56px 44px 44px;
+    }
+    .ne-section:last-child .ne-heading {
+        display: none;
+    }
+    .ne-numbers {
+        grid-row: 3 / span 2;
+    }
+    .ne-basic-operators {
+        grid-row: 3;
+    }
+    .ne-deploy .ne-produce {
+        grid-row: 4;
+    }
+    .ne-foot {
+        grid-column: 1/-1;
+        grid-row: 5;
+        margin: 0;
+        min-height: 26px;
+    }
+}
+@media (max-width: 680px) and (orientation: portrait) {
+    /* The desk sits at the bottom of the field, keeping the keypad anchored
+       when a stored expression or an explicitly selected slot needs space. */
+    .numori-editor:has(.ne-foot:not([hidden])) {
+        grid-template-rows: 66px 44px auto 90px 44px;
+    }
+    .numori-editor:has(.ne-foot:not([hidden])) .ne-foot {
+        grid-row: 3;
+    }
+    .numori-editor:has(.ne-foot:not([hidden])) .ne-numbers {
+        grid-row: 4 / span 2;
+    }
+    .numori-editor:has(.ne-foot:not([hidden])) .ne-basic-operators {
+        grid-row: 4;
+    }
+    .numori-editor:has(.ne-foot:not([hidden])) .ne-produce {
+        grid-row: 5;
+    }
+}
+@media (min-width: 1001px), (min-width: 681px) and (min-height: 501px) {
+    .ne-keyboard {
+        grid-template-rows: auto 96px 48px;
+    }
+    .numori-editor .ne-keyboard .ne-produce {
+        display: grid;
+        grid-template-columns: 18px max-content;
+        grid-template-rows: 18px 14px;
+        align-content: center;
+        justify-content: center;
+        align-items: center;
+        justify-items: start;
+        gap: 1px 7px;
+        padding: 2px 6px;
+        line-height: 1.15;
+    }
+    .ne-produce b {
+        grid-area: 1/1/3/2;
+    }
+    .ne-produce-label {
+        grid-area: 1/2;
+    }
+    .ne-produce small {
+        grid-area: 2/2;
+        line-height: 1.1;
+    }
+}
+.ne-goal-cell {
+    position: relative;
+}
+.numori-editor .ne-hint {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 39px;
+    min-height: 36px;
+    padding: 3px 5px 14px;
+    color: #eeedcc;
+    font-size: 10px;
+    font-weight: 750;
+}
+.numori-editor .ne-hint:hover,
+.numori-editor .ne-hint[aria-expanded='true'] {
+    color: #ffdb8d;
+}
+.ne-deploy .ne-launch-options {
+    display: grid;
+    grid-area: 3 / 2;
+    min-width: 0;
+}
+.ne-deploy .ne-launch-options[data-split] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+}
+.ne-deploy .ne-launch-options .ne-produce {
+    grid-area: auto;
+    min-width: 0;
+}
+.numori-editor .ne-keyboard .ne-launch-options[data-split] .ne-produce {
+    grid-template-columns: 1fr;
+    grid-template-rows: 15px 12px;
+    justify-items: center;
+    padding-inline: 2px;
+    font-size: clamp(11px, 2.5vw, 14px);
+    white-space: nowrap;
+}
+.ne-launch-options[data-split] .ne-produce b {
+    display: none;
+}
+.ne-launch-options[data-split] .ne-produce span {
+    grid-area: 1 / 1;
+}
+.ne-launch-options[data-split] .ne-produce small {
+    grid-area: 2 / 1;
+    opacity: .88;
+}
+.numori-editor .ne-launch-options [data-dispatch-route='supply']:not(:disabled) {
+    background: #7b511e;
+    color: #fff9e6;
+}
+@media (max-width: 680px) and (orientation: portrait),
+    (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+    .ne-deploy .ne-launch-options {
+        grid-row: 4;
+    }
+}
+@media (max-width: 680px) and (orientation: portrait) {
+    .numori-editor:has(.ne-foot:not([hidden])) .ne-launch-options {
+        grid-row: 5;
+    }
+}

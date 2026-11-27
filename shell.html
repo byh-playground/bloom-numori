@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+        <meta name="theme-color" content="#173b30" />
+        <title>BLOOM · 넘모리</title>
+        <!-- STYLES -->
+    </head>
+    <body>
+        <main id="titleScreen">
+            <div class="title-scene" aria-hidden="true"></div>
+            <header class="title-nav">
+                <span class="studio-lockup"><i class="studio-mark" aria-hidden="true"></i>BLOOM</span>
+                <div class="title-tools">
+                    <button type="button" data-act="audio" aria-label="사운드 설정" title="사운드 설정">♫</button>
+                    <button type="button" data-act="help" aria-label="조작법" title="조작법">?</button>
+                </div>
+            </header>
+            <div class="title-stack">
+                <section class="title-lockup" aria-label="넘모리">
+                    <span class="title-english" aria-hidden="true">NUMORI</span>
+                    <h1 aria-label="넘모리"><span>넘</span><span>모</span><span>리</span></h1>
+                    <p>숫자로 목표를 맞히고<br />도형 친구들을 소환하세요.</p>
+                </section>
+                <section class="title-play" aria-label="경기 시작">
+                    <div class="level-row">
+                        <b id="levelLabel">상대 AI</b>
+                        <div id="difficulty" aria-labelledby="levelLabel" role="group">
+                            <button type="button" data-level="easy" aria-pressed="false">쉬움</button>
+                            <button type="button" data-level="normal" aria-pressed="true">보통</button>
+                            <button type="button" data-level="hard" aria-pressed="false">어려움</button>
+                        </div>
+                    </div>
+                    <button type="button" class="battle-launch" data-act="start">
+                        AI 대전<i aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="versus-launch" data-act="multiplayer" aria-haspopup="dialog">
+                        1대1 대전
+                    </button>
+                    <button type="button" class="tutorial-launch" data-act="tutorial">튜토리얼</button>
+                </section>
+            </div>
+            <footer class="title-meta">
+                <small>v0.17.0</small>
+                <button type="button" data-act="download">↓ HTML 저장</button>
+            </footer>
+        </main>
+        <main id="gameScreen" hidden>
+            <header class="gamehead">
+                <b class="brand"><i class="sprout">❧</i> 넘모리</b>
+                <div id="baseHud"></div>
+                <span id="armyHud" title="진영별 동시 병력 상한 1,000마리">병력 0/1,000</span
+                ><time id="timer">00:00</time><button data-act="menu" aria-label="경기 메뉴">☰</button>
+            </header>
+            <div class="arena-layout">
+                <section class="field">
+                    <div id="world"></div>
+                    <output id="frameMeter" hidden aria-label="렌더 성능"></output>
+                    <div id="enemyForces" hidden aria-label="적 최다 병종">
+                        <canvas width="64" height="64" aria-hidden="true"></canvas>
+                        <div><small>적 최다 병종</small><strong></strong></div>
+                    </div>
+                    <section id="targetHint" hidden aria-label="수식 힌트">
+                        <p id="hintClue"></p>
+                        <button data-act="hintReveal">풀이 보기</button>
+                        <button data-act="hintClose" aria-label="힌트 닫기">×</button>
+                    </section>
+                    <div id="launchReceipt" hidden aria-live="polite">
+                        <div class="launch-equation"></div>
+                        <strong></strong>
+                    </div>
+                    <div id="guide" hidden>
+                        <small id="guideCount"></small>
+                        <p id="guideText"></p>
+                        <button data-act="guideNext">다음</button
+                        ><button data-act="guideEnd" aria-label="튜토리얼 닫기">×</button>
+                    </div>
+                    <div class="field-tools">
+                        <button
+                            class="unit-guide"
+                            data-act="labor"
+                            aria-controls="laborPanel"
+                            aria-expanded="false"
+                            aria-label="채집 배정"
+                        >
+                            <span class="wide-label">채집 배정</span
+                            ><span class="short-label" aria-hidden="true">배정</span>
+                        </button>
+                        <section id="laborPanel" aria-label="광산별 일꾼 배정" hidden>
+                            <strong id="laborState"></strong><span class="labor-hint">−로 빼고 +로 배정</span>
+                            <div id="mines"></div>
+                        </section>
+                        <button class="unit-guide" data-act="units" aria-label="병종 판정표">병종표</button>
+                        <button class="field-switch" data-act="fieldFocus" aria-expanded="false" aria-controls="world">
+                            전장 크게
+                        </button>
+                    </div>
+                </section>
+                <aside class="desk" aria-label="생산 작업대">
+                    <div id="frontRoutes" role="group" aria-label="전선 둘러보기">
+                        <button type="button" data-route="bridge" title="중앙 다리 보기">
+                            <i class="front-bridge" aria-hidden="true"></i>
+                            <span><b>중앙 다리</b><small id="bridgeOrder">첫 부대 출격</small></span>
+                        </button>
+                        <button type="button" data-route="supply" title="거인 전선 보기" disabled>
+                            <i class="front-giant" aria-hidden="true"></i>
+                            <span><b>거인 전선</b><small id="giantName">중립 거인</small></span>
+                            <span class="giant-status"><small id="giantPhaseLabel">제단</small><strong id="giantPhase">중립</strong></span>
+                        </button>
+                    </div>
+                    <div id="editor"></div>
+                    <div id="fieldToolsDock"></div>
+                </aside>
+            </div>
+        </main>
+        <dialog id="lobby" aria-labelledby="lobbyTitle">
+            <header>
+                <h2 id="lobbyTitle">1대1 대전</h2>
+                <button type="button" class="lobby-close" aria-label="대기실 닫기">×</button>
+            </header>
+            <div id="lobbyEntry">
+                <button id="createRoom" type="button" class="lobby-primary">새 방 만들기</button>
+                <form id="joinForm" novalidate>
+                    <label for="joinCode">상대의 채널 코드</label>
+                    <div class="lobby-join-row">
+                        <input
+                            id="joinCode"
+                            type="text"
+                            inputmode="numeric"
+                            pattern="[0-9]{4}"
+                            maxlength="4"
+                            autocomplete="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            placeholder="숫자 4자리"
+                            aria-describedby="lobbyMessage"
+                        />
+                        <button id="joinRoom" class="lobby-secondary" type="submit">참가</button>
+                    </div>
+                </form>
+            </div>
+            <section id="lobbyWaiting" aria-label="연결 상태" hidden>
+                <div id="hostCode" hidden>
+                    <label for="lobbyCode">상대에게 알려줄 채널 코드</label>
+                    <div class="lobby-code-row">
+                        <input id="lobbyCode" readonly type="text" aria-label="생성한 채널 코드" />
+                        <button id="copyCode" class="lobby-secondary" type="button">복사</button>
+                    </div>
+                </div>
+                <button id="cancelRoom" class="lobby-secondary" type="button">연결 취소</button>
+            </section>
+            <p id="lobbyMessage" role="status" aria-live="polite" aria-atomic="true"></p>
+        </dialog>
+        <dialog id="modal">
+            <header>
+                <h2 id="modalTitle"></h2>
+                <button data-act="close" aria-label="닫기">×</button>
+            </header>
+            <div id="modalBody"></div>
+        </dialog>
+        <div id="toast" role="status" aria-live="polite"></div>
+        <img hidden id="environmentImage" src="ENV_ATLAS" alt="" />
+        <img hidden id="rigImage" src="RIG_ATLAS" alt="" />
+        <!-- SCRIPTS -->
+    </body>
+</html>

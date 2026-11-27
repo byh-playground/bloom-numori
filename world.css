@@ -1,0 +1,241 @@
+.nr-world {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #b5c68e;
+    min-width: 0;
+    min-height: 0;
+}
+.nr-field {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+    outline: none;
+}
+.nr-field:active {
+    cursor: grabbing;
+}
+.nr-capture-status {
+    --capture-accent: #f3d18b;
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    width: 158px;
+    height: 53px;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: 17px 5px 12px;
+    gap: 3px;
+    padding: 5px 7px;
+    border: 1px solid var(--capture-accent);
+    border-radius: 7px;
+    background: #172c26;
+    box-shadow: 0 2px 0 #162c2670;
+    color: #fff9e8;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+}
+.nr-capture-status[data-side='ally'] { --capture-accent: #7be5d0; }
+.nr-capture-status[data-side='enemy'] { --capture-accent: #ffac92; }
+.nr-capture-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3px;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 1;
+}
+.nr-capture-label { color: var(--capture-accent); }
+.nr-capture-track {
+    overflow: hidden;
+    border-radius: 4px;
+    background: #46635a;
+}
+.nr-capture-track i {
+    display: block;
+    height: 100%;
+    background: var(--capture-accent);
+    transform-origin: left center;
+    transform: scaleX(var(--capture-progress));
+}
+.nr-capture-status[data-progress-side='ally'] .nr-capture-track i { background: #7be5d0; }
+.nr-capture-status[data-progress-side='enemy'] .nr-capture-track i { background: #ffac92; }
+.nr-capture-count {
+    white-space: nowrap;
+    color: #e8e4ce;
+    font-size: 10px;
+    line-height: 12px;
+}
+.nr-map {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    width: clamp(98px, 12vw, 156px);
+    height: auto;
+    aspect-ratio: 5/3;
+    box-sizing: border-box;
+    border: 3px solid #364e3f;
+
+    border-radius: 6px;
+    touch-action: none;
+    cursor: crosshair;
+}
+.nr-camera {
+    position: absolute;
+    z-index: 1;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    gap: 4px;
+}
+.nr-camera button {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #53674f;
+    border-radius: 7px;
+    background: #f6efd8ed;
+    color: #344c40;
+
+    cursor: pointer;
+}
+.nr-camera button:hover {
+    background: #fffadd;
+}
+.nr-camera button:active {
+    transform: translateY(1px);
+}
+.nr-camera svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+@media (max-width: 650px), (max-height: 490px) {
+    .nr-map {
+        width: 84px;
+        left: 6px;
+        bottom: 6px;
+        border-width: 2px;
+    }
+    .nr-camera {
+        right: 6px;
+        bottom: 6px;
+        gap: 3px;
+    }
+    .nr-camera button {
+        width: 29px;
+        height: 29px;
+        border-radius: 5px;
+    }
+    .nr-camera svg {
+        width: 15px;
+        height: 15px;
+    }
+}
+.nr-ground {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+@media (max-width: 680px) and (orientation: portrait), (max-height: 500px) and (orientation: landscape) {
+    .nr-camera button {
+        width: 36px;
+        height: 36px;
+        background: #fffbed;
+    }
+    .field-focused .nr-camera button {
+        width: 44px;
+        height: 44px;
+    }
+    .field-focused .nr-map {
+        width: 108px;
+    }
+}
+.nr-camera button[aria-pressed='true'] {
+    background: #d4eadb;
+    border-color: #438075;
+    color: #154f4a;
+}
+.nr-world[data-short-field='true'] .nr-map {
+    left: 4px;
+    bottom: 4px;
+    width: clamp(59px, 17vw, 72px);
+    border-radius: 5px;
+}
+.nr-world[data-short-field='true'] .nr-camera {
+    right: 4px;
+    bottom: 4px;
+    gap: 0;
+    border: 1px solid #61765d;
+    border-radius: 7px;
+    overflow: hidden;
+    background: #fbf4dd;
+}
+.nr-world[data-short-field='true'] .nr-camera button {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    width: 34px;
+    height: 34px;
+}
+.nr-world[data-short-field='true'] .nr-camera button + button {
+    border-left: 1px solid #c3c9ac;
+}
+.nr-world[data-short-field='true'] .nr-camera button[aria-pressed='true'] {
+    background: #c4e3d8;
+}
+.nr-world[data-mini-field='true'] .nr-camera {
+    display: grid;
+    grid-template-columns: repeat(2, 34px);
+    grid-template-areas: 'home battle' 'overview overview' 'minus plus';
+}
+.nr-world[data-mini-field='true'] [data-camera='home'] {
+    grid-area: home;
+}
+.nr-world[data-mini-field='true'] [data-camera='battle'] {
+    grid-area: battle;
+}
+.nr-world[data-mini-field='true'] .nr-camera button[data-camera='overview'] {
+    grid-area: overview;
+    width: auto;
+}
+.nr-world[data-mini-field='true'] [data-camera='minus'] {
+    grid-area: minus;
+}
+.nr-world[data-mini-field='true'] [data-camera='plus'] {
+    grid-area: plus;
+}
+.nr-world[data-mini-field='true'] .nr-camera button:nth-child(n + 3) {
+    border-top: 1px solid #c3c9ac;
+}
+.nr-world[data-mini-field='true'] .nr-camera button:nth-child(3),
+.nr-world[data-mini-field='true'] .nr-camera button:nth-child(4) {
+    border-left: 0;
+}
+
+.nr-gpu {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.nr-world[data-renderer='webgl2'] .nr-ground,
+.nr-world[data-renderer='canvas2d'] .nr-gpu {
+    display: none;
+}
