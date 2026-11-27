@@ -110,8 +110,7 @@ p {
 }
 .studio-lockup,
 .title-tools button,
-.title-meta small,
-.title-meta button {
+.title-meta small {
     background: var(--cover-paper);
     color: var(--cover-ink);
     border: 2px solid var(--cover-ink);
@@ -287,15 +286,11 @@ p {
 .title-meta {
     padding-block: 8px max(14px, env(safe-area-inset-bottom));
 }
-.title-meta small,
-.title-meta button {
+.title-meta small {
     border-width: 1px;
     border-radius: 5px;
     padding: 3px 7px;
     font-size: 11px;
-}
-.title-meta button {
-    min-height: 30px;
 }
 #titleScreen button:not([aria-pressed='true']):hover {
     filter: brightness(1.05);
@@ -408,9 +403,6 @@ p {
     }
     .title-meta {
         padding-block: 2px max(4px, env(safe-area-inset-bottom));
-    }
-    .title-meta button {
-        min-height: 26px;
     }
 }
 .gamehead {

@@ -828,13 +828,6 @@
             case 'guideEnd':
                 guide(-1);
                 break;
-            case 'download': {
-                const a = document.createElement('a');
-                a.href = location.href.split('?')[0].split('#')[0];
-                a.download = 'numori-beta.html';
-                a.click();
-                break;
-            }
         }
     });
     modal.addEventListener('cancel', (e) => {

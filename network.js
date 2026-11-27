@@ -1,7 +1,8 @@
 /* Application messages travel on GameKit's reliable, ordered WebRTC app channel. */
 globalThis.NumoriNetwork = (() => {
     'use strict';
-    const VERSION = NumoriVersion + '-1';
+    // Compatible product patches use the same room protocol identifier.
+    const VERSION = NumoriVersion.replace(/\.\d+$/, '.0') + '-1';
     const namespace = 'bloom-numori';
     const relays = [
         'wss://nos.lol',
