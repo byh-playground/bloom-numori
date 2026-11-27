@@ -1,0 +1,17 @@
+{
+    "name": "bloom-numori-tooling",
+    "private": true,
+    "scripts": {
+        "check:changed": "node tools/check-changed.mjs"
+    },
+    "engines": {
+        "node": "^22.13.0 || >=24"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "eslint": "10.15.0",
+        "eslint-plugin-html": "8.2.1",
+        "globals": "16.5.0",
+        "prettier": "3.9.10"
+    }
+}

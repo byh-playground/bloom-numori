@@ -2,7 +2,7 @@
 
 Default signaling uses the deployed GameKit Nostr/WebRTC path. Use --local for
 offline signaling via two tabs sharing a browser context. The HTTP fixture
-serves exactly one self-contained game from a loopback origin.
+serves the game from a loopback origin.
 """
 import argparse
 import asyncio
@@ -10,7 +10,8 @@ import contextlib
 import json
 import re
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from functools import partial
+from http.server import BaseHTTPRequestHandler, SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -46,10 +47,15 @@ def serve(source):
     if '://' in source:
         yield source
         return
-    data = Path(source).resolve().read_bytes()
+    path = Path(source).resolve(strict=True)
+
+    class StaticHandler(SimpleHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
+            data = path.read_bytes()
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Content-Length', str(len(data)))
@@ -59,11 +65,14 @@ def serve(source):
         def log_message(self, *args):
             pass
 
-    with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
+    static = path.name == 'index.html'
+    handler = partial(StaticHandler, directory=path.parent) if static else Handler
+    entry = '/' if static else '/numori/'
+    with ThreadingHTTPServer(('127.0.0.1', 0), handler) as server:
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
-            yield f'http://127.0.0.1:{server.server_port}/numori/'
+            yield f'http://127.0.0.1:{server.server_port}{entry}'
         finally:
             server.shutdown()
             thread.join()
@@ -304,7 +313,7 @@ async def run(url, local, archive, disconnect_only=False):
 
 if __name__ == '__main__':
     cli=argparse.ArgumentParser()
-    cli.add_argument('source',nargs='?',default=str(ROOT/'numori-beta.html'))
+    cli.add_argument('source',nargs='?',default=str(ROOT/'index.html'))
     cli.add_argument('--local',action='store_true')
     cli.add_argument('--evidence',type=Path)
     cli.add_argument('--disconnect',action='store_true',help='Close the guest tab during a live match')

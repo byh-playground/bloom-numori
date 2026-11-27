@@ -1,19 +1,19 @@
-"""Exercise the distributed artifact with desktop and emulated touch input."""
+"""Exercise the playable source with desktop and emulated touch input."""
+import argparse
 from pathlib import Path
 from os import environ
 from playwright.sync_api import sync_playwright
+from multiplayer import ROOT, game_url, serve
 
-HERE=Path(__file__).resolve().parent
-URL=(HERE.parent/"numori-beta.html").as_uri()+"?debug=1&seed=123"
-
-def test_surface(browser, name, width, height, touch):
+def test_surface(browser, url, name, width, height, touch):
     ctx=browser.new_context(viewport={"width":width,"height":height},has_touch=touch,
-        is_mobile=touch,device_scale_factor=1,offline=True)
+        is_mobile=touch,device_scale_factor=1)
     page=ctx.new_page()
     page.set_default_timeout(4500)
     errors=[]
     page.on("pageerror",lambda error: errors.append(str(error)))
-    page.goto(URL)
+    page.goto(url)
+    assert page.locator('#productVersion').inner_text() == 'v' + page.evaluate('NumoriVersion')
     def press(selector):
         elem=page.locator(selector).first
         (elem.tap if touch else elem.click)()
@@ -116,13 +116,17 @@ def test_surface(browser, name, width, height, touch):
         assert page.locator('#titleScreen').is_visible()
         print(name,outcome)
     assert not errors,errors
-    print('PASS',name,'offline, errors',errors,flush=True)
+    print('PASS',name,'errors',errors,flush=True)
     ctx.close()
 
 
 if __name__=='__main__':
-    with sync_playwright() as p:
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument('source', nargs='?', default=str(ROOT/'index.html'))
+    opts = cli.parse_args()
+    with serve(opts.source) as origin, sync_playwright() as p:
+        url = game_url(origin, False)
         browser=p.chromium.launch()
         for args in [('pc',1440,900,False),('mobile',390,844,True),('landscape',844,390,True)]:
-            test_surface(browser,*args)
+            test_surface(browser,url,*args)
         browser.close()

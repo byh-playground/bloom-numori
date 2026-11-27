@@ -11,6 +11,9 @@ node_modules/
 /numori-beta.part
 
 # Local browser captures, exported reports, and measurement output.
+/qa/QA.md
+/qa/field-review/
+/qa/mobile-review/
 /qa/**/*.png
 /qa/**/*.jpg
 /qa/**/*.webp
