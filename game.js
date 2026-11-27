@@ -1,12 +1,14 @@
 (() => {
     'use strict';
     const $ = (selector) => document.querySelector(selector);
+    $('#productVersion').textContent = 'v' + NumoriVersion;
     const audio = NumoriAudio,
         modal = $('#modal'),
         params = new URLSearchParams(location.search);
     const mines = { mineral: '미네랄', gas: '가스' };
     const lessons = [
-        () => `이번 목표는 ${economy.sides[localSide].targets.summon}이에요. 숫자 광석을 하나 눌러 식을 시작하세요.`,
+        () =>
+            `이번 목표는 ${economy.sides[localSide].targets.summon}이에요. 숫자 광석을 하나 눌러 식을 시작하세요.`,
         () => {
             const witness = economy.sides[localSide].summonWitness;
             return witness
@@ -15,8 +17,10 @@
         },
         () =>
             '등호로 출격하세요. 목표와 차이가 2 이내여야 출격해요. 차이가 2면 8마리, 1이면 16마리, 정확하면 24마리예요.',
-        () => '정확히 맞혀 소환하면 다음 목표가 열려요. 일꾼이 본진에 가져온 숫자와 기호로 새 식을 만들어 보세요.',
-        () => '두 번째부터 식을 완성하면 출격 버튼이 두 개 보여요. 거인 전선에서는 병력 우세를 30초 유지하면 거인이 아군에 합류해요.',
+        () =>
+            '정확히 맞혀 소환하면 다음 목표가 열려요. 일꾼이 본진에 가져온 숫자와 기호로 새 식을 만들어 보세요.',
+        () =>
+            '두 번째부터 식을 완성하면 출격 버튼이 두 개 보여요. 거인 전선에서는 병력 우세를 30초 유지하면 거인이 아군에 합류해요.',
     ];
     let match,
         series,
@@ -32,10 +36,10 @@
     let lastHud = -Infinity,
         lastFrame = 0,
         modalPage = '',
-        lastMessage,
         lastSound = {},
         endShown = false;
-    let hintGoal, receiptUntil = 0;
+    let hintGoal,
+        receiptUntil = 0;
     let meterEnabled = params.get('perf') === '1';
     const frameIntervals = [];
     let meterAt = -Infinity;
@@ -51,11 +55,18 @@
         meterAt = t;
         const stats = world.renderStats;
         const sorted = frameIntervals.slice().sort((a, b) => a - b);
-        const p95 = sorted.length ? sorted[Math.ceil(sorted.length * 0.95) - 1].toFixed(1) + 'ms' : '측정 중';
-        panel.textContent = (stats?.backend === 'webgl2' ? 'WebGL 2 · GPU 드로우 ' + stats.drawCalls + '회 · 쿼드 ' + stats.quads : 'Canvas 2D') +
-            ' · 프레임 간격 p95 ' + p95;
+        const p95 = sorted.length
+            ? sorted[Math.ceil(sorted.length * 0.95) - 1].toFixed(1) + 'ms'
+            : '측정 중';
+        panel.textContent =
+            (stats?.backend === 'webgl2'
+                ? 'WebGL 2 · GPU 드로우 ' + stats.drawCalls + '회 · 쿼드 ' + stats.quads
+                : 'Canvas 2D') +
+            ' · 프레임 간격 p95 ' +
+            p95;
     }
-    const formatTime = (t) => [Math.floor(t / 60), Math.floor(t % 60)].map((n) => String(n).padStart(2, '0')).join(':');
+    const formatTime = (t) =>
+        [Math.floor(t / 60), Math.floor(t % 60)].map((n) => String(n).padStart(2, '0')).join(':');
     const active = () => !!battle && battle.winner < 0 && !paused && !modal.open;
     const button = (act, label, cls = '') =>
         '<button class="' + cls + '" data-act="' + act + '">' + label + '</button>';
@@ -127,11 +138,15 @@
                     '</p></details>',
             )
             .join('');
-        const giants = Object.values(Battle.giants).map((unit) => unit.name + ' · ' + unit.role).join(' / ');
+        const giants = Object.values(Battle.giants)
+            .map((unit) => unit.name + ' · ' + unit.role)
+            .join(' / ');
         openPanel(
             '조작법 · 연산자',
             '<p>숫자 → 연산자 → 숫자를 누른 뒤 등호로 소환하세요. ‘수식 보관’을 누르면 지금 식을 두고 새 식을 시작해요. 보관한 값을 누르면 다시 사용할 수 있어요. 손패의 1~9 숫자와 +, −, ×, ÷로 목표를 만들어 보세요. 목표에서 2 이내인 양의 정수만 출격해요. 차이가 2면 8마리, 1이면 16마리, 정확히 맞추면 24마리예요. 범위 밖의 수식은 재료를 바꿔 다시 시도하세요. 병종은 수식 결과로 정해져요.</p>' +
-                '<p>첫 부대는 중앙 다리로 출격해요. 두 번째부터는 식을 완성한 뒤 중앙 다리나 거인 전선 버튼을 눌러 출격해요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' + giants + '</p>' +
+                '<p>첫 부대는 중앙 다리로 출격해요. 두 번째부터는 식을 완성한 뒤 중앙 다리나 거인 전선 버튼을 눌러 출격해요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
+                giants +
+                '</p>' +
                 '<p>전선마다 방어 타워가 하나씩 있어요. 한 전선의 타워를 부수면 그 길로 적 본진까지 갈 수 있어요. 타워와 본진은 사거리 안의 적에게 0.2초마다 쏴요. 다섯 번째 탄은 곡사로 날아가 착탄 지점 주변의 적을 함께 때려요.</p>' +
                 '<p>시작 일꾼은 미네랄 5마리, 가스 5마리입니다. 일꾼은 광산에 도착하면 2초 동안 채집한 뒤 본진으로 돌아와 자원을 반납합니다. 광산별 인원은 채집 배정에서 조절하세요.</p><ul><li>숫자 키와 + − × ÷ 로 입력 · Enter로 소환 · Backspace 또는 Ctrl+Z로 취소</li><li>전장 드래그 또는 WASD로 이동 · 휠이나 두 손가락으로 확대 · 미니맵을 눌러 이동</li></ul>' +
                 ops,
@@ -153,7 +168,9 @@
     function showEnemyForces() {
         const view = $('#enemyForces');
         const enemy = 1 - localSide;
-        const giant = Object.keys(Battle.giants).find((kind) => battle.giantCounts[enemy][kind] > 0);
+        const giant = Object.keys(Battle.giants).find(
+            (kind) => battle.giantCounts[enemy][kind] > 0,
+        );
         const type = giant ?? enemyLead();
         view.hidden = type === null;
         if (type === null) return;
@@ -207,12 +224,6 @@
         $('#guideText').textContent = lessons[i]();
         $('[data-act="guideNext"]').textContent = i === lessons.length - 1 ? '완료' : '다음';
     }
-    function notify(message) {
-        $('#toast').textContent = message;
-        $('#toast').classList.add('on');
-        clearTimeout(lastMessage);
-        lastMessage = setTimeout(() => $('#toast').classList.remove('on'), 1900);
-    }
     function showFieldReceipt(detail, title, kind = 'summon') {
         const receipt = $('#launchReceipt');
         receipt.dataset.kind = kind;
@@ -223,11 +234,16 @@
     }
     function showLaunchReceipt(ast, outcome) {
         if (outcome.route === 'supply') {
-            showFieldReceipt('거인 전선으로 이동', Battle.types[outcome.unitType].name + ' ' + outcome.actual + '마리 출격');
+            showFieldReceipt(
+                '거인 전선으로 이동',
+                Battle.types[outcome.unitType].name + ' ' + outcome.actual + '마리 출격',
+            );
             return;
         }
         if (!outcome.matched) return;
-        const launch = battle.effects.findLast((effect) => effect.kind === 'bonus' && effect.side === localSide);
+        const launch = battle.effects.findLast(
+            (effect) => effect.kind === 'bonus' && effect.side === localSide,
+        );
         if (world.canShowLaunch(launch)) {
             $('#launchReceipt').hidden = true;
             receiptUntil = 0;
@@ -275,7 +291,6 @@
         battle = economy = editor = world = loop = null;
         if (modal.open) modal.close();
         modalPage = '';
-        $('#toast').classList.remove('on');
     }
     function cleanup() {
         const previousSeries = series;
@@ -291,7 +306,9 @@
         $('#gameScreen').hidden = true;
         $('#titleScreen').hidden = false;
     }
-    const dockedTools = matchMedia('(min-height: 365px) and (max-height: 500px) and (orientation: landscape)');
+    const dockedTools = matchMedia(
+        '(min-height: 365px) and (max-height: 500px) and (orientation: landscape)',
+    );
     const shortField = matchMedia('(max-height: 345px) and (orientation: landscape)');
     function placeFieldTools() {
         const bar = $('.field-tools');
@@ -299,7 +316,8 @@
         const host = $(inDesk ? '#fieldToolsDock' : '.field');
         if (bar.parentNode !== host) host.appendChild(bar);
         const routes = $('#frontRoutes');
-        const fieldRoutes = shortField.matches || $('#gameScreen').classList.contains('field-focused');
+        const fieldRoutes =
+            shortField.matches || $('#gameScreen').classList.contains('field-focused');
         if (fieldRoutes && routes.parentNode !== $('.field')) $('.field').append(routes);
         if (!fieldRoutes && routes.parentNode !== $('.desk')) $('.desk').prepend(routes);
     }
@@ -353,7 +371,9 @@
         } else {
             openPanel(
                 '연결 종료',
-                '<p></p><div class="modal-actions">' + button('leave', '메인 화면', 'wide') + '</div>',
+                '<p></p><div class="modal-actions">' +
+                    button('leave', '메인 화면', 'wide') +
+                    '</div>',
                 'disconnected',
             );
             $('#modalBody p').textContent = reason;
@@ -414,8 +434,10 @@
                 if (!enemy) return '';
                 if (type === 'spear' && enemy === 'charger') return '돌격 저지';
                 if (type === 'shield' && enemy === 'archer') return '화살 방어';
-                if (Battle.roles?.[type]?.strongAgainst?.includes(enemy)) return Battle.types[enemy].name + '에 유리';
-                if (Battle.roles?.[enemy]?.strongAgainst?.includes(type)) return Battle.types[enemy].name + ' 주의';
+                if (Battle.roles?.[type]?.strongAgainst?.includes(enemy))
+                    return Battle.types[enemy].name + '에 유리';
+                if (Battle.roles?.[enemy]?.strongAgainst?.includes(type))
+                    return Battle.types[enemy].name + ' 주의';
                 return '';
             },
             preview: (ast, res) => economy.preview(localSide, 'summon', ast, res),
@@ -442,7 +464,10 @@
                     if (lesson === 0) guide(1);
                     if (
                         lesson === 1 &&
-                        MathCore.matches(MathCore.evaluate(ast), economy.sides[localSide].targets.summon)
+                        MathCore.matches(
+                            MathCore.evaluate(ast),
+                            economy.sides[localSide].targets.summon,
+                        )
                     )
                         guide(2);
                 }
@@ -482,7 +507,10 @@
             getInput: () => input,
             canAdvance: () => !paused && battle.winner < 0,
             render: ({ frameTimeMs: t }) => {
-                world.render({ battle, economy }, lastFrame ? Math.min(0.12, (t - lastFrame) / 1000) : 0);
+                world.render(
+                    { battle, economy },
+                    lastFrame ? Math.min(0.12, (t - lastFrame) / 1000) : 0,
+                );
                 showMeter(t, lastFrame ? t - lastFrame : 0);
                 lastFrame = t;
                 if (battle.winner >= 0 && !endShown) result();
@@ -555,14 +583,20 @@
         );
     }
     function viewRoute(route) {
-        if (!active() || !['bridge', 'supply'].includes(route) || $('#editor').hasAttribute('aria-busy')) return;
+        if (
+            !active() ||
+            !['bridge', 'supply'].includes(route) ||
+            $('#editor').hasAttribute('aria-busy')
+        )
+            return;
         if (route === 'supply') world.supply();
         else world.battle();
     }
     function routeDefense(route) {
         const own = battle.towers[localSide][route];
         const enemy = battle.towers[1 - localSide][route];
-        const condition = (tower) => tower.hp > 0 ? '체력 ' + Math.ceil(tower.hp) + '/' + tower.maxHp : '파괴';
+        const condition = (tower) =>
+            tower.hp > 0 ? '체력 ' + Math.ceil(tower.hp) + '/' + tower.maxHp : '파괴';
         return '아군 타워 ' + condition(own) + ' · 적 타워 ' + condition(enemy);
     }
     function showRoutes() {
@@ -573,7 +607,9 @@
         supply.disabled = first;
         const bridgeCaption = first
             ? '첫 부대 출격'
-            : battle.towers[1 - localSide].bridge.hp > 0 ? '적 타워 → 본진' : '적 본진 직행';
+            : battle.towers[1 - localSide].bridge.hp > 0
+              ? '적 타워 → 본진'
+              : '적 본진 직행';
         $('#bridgeOrder').textContent = bridgeCaption;
         bridge.title = '중앙 다리 보기 · ' + routeDefense('bridge');
         supply.title = '거인 전선 보기 · ' + routeDefense('supply');
@@ -583,10 +619,11 @@
         const giant = Battle.giants[station.giantKind];
         const recruit = station.lastRecruit;
         const justRecruited = recruit && battle.time - recruit.time < 4;
-        const team = (side) => side === localSide ? '아군' : '적군';
+        const team = (side) => (side === localSide ? '아군' : '적군');
         let name = giant?.name ?? '새 거인 대기';
         let label = '다음 거인';
-        let phase = Math.max(0, Math.ceil((station.nextSpawn ?? battle.time) - battle.time - 1e-8)) + '초';
+        let phase =
+            Math.max(0, Math.ceil((station.nextSpawn ?? battle.time) - battle.time - 1e-8)) + '초';
         if (giant) {
             label = giant.role;
             phase = '중립';
@@ -605,7 +642,11 @@
             name = Battle.giants[recruit.giantKind].name + ' 합류';
             label = team(recruit.side) + ' 확보';
         }
-        for (const [selector, value] of [['#giantName', name], ['#giantPhaseLabel', label], ['#giantPhase', phase]]) {
+        for (const [selector, value] of [
+            ['#giantName', name],
+            ['#giantPhaseLabel', label],
+            ['#giantPhase', phase],
+        ]) {
             const node = $(selector);
             if (node.textContent !== value) node.textContent = value;
         }
@@ -621,7 +662,11 @@
                 (index, i) =>
                     '<span class="hp ' +
                     (i ? 'enemy' : '') +
-                    '" title="본진 체력 ' + Math.ceil(battle.bases[index].hp) + '/' + battle.bases[index].maxHp + '"><span>' +
+                    '" title="본진 체력 ' +
+                    Math.ceil(battle.bases[index].hp) +
+                    '/' +
+                    battle.bases[index].maxHp +
+                    '"><span>' +
                     (battle.threat[index] ? '⚠ ' : '') +
                     (i ? '적군' : '아군') +
                     '</span><b>' +
@@ -638,10 +683,12 @@
             Economy.config.armyLimit.toLocaleString('ko-KR');
         if (!$('#laborPanel').hidden) {
             const allocation = economy.allocation(localSide);
-            $('#laborState').textContent = '일꾼 ' + s.workers.length + '마리 · 대기 ' + allocation.idle + '마리';
+            $('#laborState').textContent =
+                '일꾼 ' + s.workers.length + '마리 · 대기 ' + allocation.idle + '마리';
             for (const row of document.querySelectorAll('.mine')) {
                 const k = row.dataset.mine;
-                row.querySelector('b').textContent = allocation[k] + '/' + economy.config.mineSlots[k];
+                row.querySelector('b').textContent =
+                    allocation[k] + '/' + economy.config.mineSlots[k];
                 row.querySelector('[data-delta="-1"]').disabled = paused || !allocation[k];
                 row.querySelector('[data-delta="1"]').disabled =
                     paused ||
@@ -674,11 +721,15 @@
         }
         if (b.dataset.level) {
             level = b.dataset.level;
-            document.querySelectorAll('[data-level]').forEach((v) => v.setAttribute('aria-pressed', String(v === b)));
+            document
+                .querySelectorAll('[data-level]')
+                .forEach((v) => v.setAttribute('aria-pressed', String(v === b)));
             return;
         }
         if (b.dataset.delta && active()) {
-            Promise.resolve(match.assign(b.closest('[data-mine]').dataset.mine, Number(b.dataset.delta)))
+            Promise.resolve(
+                match.assign(b.closest('[data-mine]').dataset.mine, Number(b.dataset.delta)),
+            )
                 .then(() => {
                     if (battle) hud();
                 })
@@ -764,7 +815,9 @@
                 if (paused) {
                     openPanel(
                         '일시정지',
-                        '<div class="modal-actions">' + button('pause', '▶ 경기 재개', 'wide') + '</div>',
+                        '<div class="modal-actions">' +
+                            button('pause', '▶ 경기 재개', 'wide') +
+                            '</div>',
                         'pause',
                     );
                 } else closePanel();
@@ -831,7 +884,11 @@
                     const control = $('[data-act="rematch"]');
                     if (control) {
                         control.disabled = mine;
-                        control.textContent = mine ? '상대 응답 대기 중' : theirs ? '재경기 수락' : '재경기 요청';
+                        control.textContent = mine
+                            ? '상대 응답 대기 중'
+                            : theirs
+                              ? '재경기 수락'
+                              : '재경기 요청';
                     }
                 },
             });

@@ -1,10 +1,14 @@
 # 넘모리
 
-휴대폰이나 PC에서 공개 플레이 링크를 열고 **1대1 대전**을 선택한다. 한 명이 **새 방 만들기**를 누르고, 다른 한 명은 표시된 네 자리 코드를 입력한다. 양쪽이 연결되면 경기가 시작된다. 병력과 자원의 소속은 각자의 화면을 기준으로 표시한다.
+휴대폰이나 PC에서 [넘모리 플레이](https://byh-playground.github.io/bloom-numori/)를 열고 **1대1 대전**을 선택한다. 한 명이 **새 방 만들기**를 누르고, 다른 한 명은 표시된 네 자리 코드를 입력한다. 양쪽이 연결되면 경기가 시작된다. 병력과 자원의 소속은 각자의 화면을 기준으로 표시한다.
 
-## 실행과 패키징
+## 로컬 실행
 
-프로젝트 폴더에서 Python 3으로 `python pack.py`를 실행하면 그림과 실행 코드를 포함한 `numori-beta.html`이 생성된다. 싱글 대전은 이 파일을 브라우저에서 열어 오프라인으로 실행할 수 있다. 온라인 대전은 HTTPS 플레이 링크에서 시작한다.
+프로젝트 폴더에서 `python -m http.server 8000 --bind 127.0.0.1`을 실행하고 [로컬 게임](http://127.0.0.1:8000/)을 연다. `index.html`은 같은 체크아웃의 JS·CSS·에셋을 읽는다. html-share에 올릴 단일 파일이 필요한 경우 `python pack.py`로 `numori-beta.html`을 내보낼 수 있다.
+
+## 배포
+
+GitHub Actions가 `main`의 브라우저 원본을 Pages에 게시한다. BLOOM PLAYGROUND 메타데이터는 `bloom-game.json`에 있다. Nightly 태그는 `main` 푸시마다 발행된다. 검증한 커밋을 Stable로 승격할 때는 Actions의 태그 발행 워크플로에서 커밋 SHA, 제품 버전, 검증 승인을 입력한다.
 
 ## 경기 구조
 
@@ -18,13 +22,13 @@
 
 ## 검수
 
-`node --test tests/math.test.cjs tests/economy.test.cjs tests/match-session.test.cjs`로 경기 규칙과 통신 명령을 확인한다. Playwright와 Chrome이 설치된 환경에서는 `python qa/multiplayer.py`로 두 브라우저 대전을, `python qa/play.py`로 오프라인 싱글 흐름을 검수한다.
+Playwright 환경에서 `python qa/play.py`는 로컬 원본의 싱글플레이를 PC와 모바일 화면 크기로 검수한다. `python qa/multiplayer.py`는 Chrome 두 브라우저로 1대1 대전을, `python qa/altar_duel.py <주소> --out <결과폴더>`는 같은 경기에서 양 진영의 거인 확보를 검수한다. 배포 주소를 인수로 주면 해당 빌드를 확인한다.
 
 방 탐색에는 인터넷 연결이 필요하다. 현재 직접 연결에 STUN을 사용하며, TURN 중계가 필요한 네트워크 조합에서는 연결이 실패할 수 있다. 두 화면이 함께 진행되도록 참가자의 확인이 밀리면 호스트도 기다린다.
 
-`python qa/two_fronts.py numori-beta.html --out <결과폴더>`는 같은 시드와 수식으로 두 번째 부대를 각 경로에 보내서 첫 교전과 거인 영입을 비교한다. `node qa/two-fronts-value.cjs`는 두 경로의 전투 결과를 비교한다.
+`python qa/two_fronts.py <주소> --out <결과폴더>`는 같은 시드와 수식으로 두 번째 부대를 각 경로에 보내서 첫 교전과 거인 영입을 비교한다.
 
-`node --test tests/defenses.test.cjs`는 고립된 침입의 저지와 전선별 돌파를 확인한다. `python qa/defense.py numori-beta.html --out <결과폴더>`로 두 전선의 첫 교전, 타워 파괴, 본진 공격 장면을 재현한다.
+`python qa/defense.py <주소> --out <결과폴더>`로 두 전선의 첫 교전, 타워 파괴, 본진 공격 장면을 재현한다.
 
 ## 전장 렌더링과 템포
 

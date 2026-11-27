@@ -1,7 +1,7 @@
 /* Application messages travel on GameKit's reliable, ordered WebRTC app channel. */
 globalThis.NumoriNetwork = (() => {
     'use strict';
-    const VERSION = '0.17.0-1';
+    const VERSION = NumoriVersion + '-1';
     const namespace = 'bloom-numori';
     const relays = [
         'wss://nos.lol',
@@ -17,7 +17,8 @@ globalThis.NumoriNetwork = (() => {
     function networkError(code, cause) {
         const descriptions = {
             'invalid-code': '숫자 네 자리 채널 코드를 입력하세요.',
-            'insecure-context': '온라인 대전은 HTTPS 주소와 WebRTC를 지원하는 브라우저가 필요합니다.',
+            'insecure-context':
+                '온라인 대전은 HTTPS 주소와 WebRTC를 지원하는 브라우저가 필요합니다.',
             'relay-unavailable': '채널 검색 서버에 연결할 수 없습니다.',
             'room-in-use': '이미 사용 중인 채널 코드입니다.',
             'room-full': '이미 두 사람이 대전 중인 채널입니다.',
@@ -34,7 +35,13 @@ globalThis.NumoriNetwork = (() => {
         const listeners = new Set();
         let closed = false;
         bus.onmessage = ({ data }) => {
-            if (closed || !data || data.from === identity.id || (data.to !== '*' && data.to !== identity.id)) return;
+            if (
+                closed ||
+                !data ||
+                data.from === identity.id ||
+                (data.to !== '*' && data.to !== identity.id)
+            )
+                return;
             for (const listener of listeners) listener(data);
         };
         const close = () => {
@@ -76,11 +83,17 @@ globalThis.NumoriNetwork = (() => {
                 if (message.type === 'group' && message.action === 'numori-check') {
                     void base.send(from, { type: 'presence', version: VERSION }).catch(() => {});
                 }
-                if (message.type === 'discover' && roomRef()?.state === 'open' && from !== negotiatingWith) {
+                if (
+                    message.type === 'discover' &&
+                    roomRef()?.state === 'open' &&
+                    from !== negotiatingWith
+                ) {
                     // Suppress retries from a full joiner without creating additional offers.
                     if (Date.now() - lastProbeReply > 750) {
                         lastProbeReply = Date.now();
-                        void base.send(from, { type: 'group', action: 'numori-full' }).catch(() => {});
+                        void base
+                            .send(from, { type: 'group', action: 'numori-full' })
+                            .catch(() => {});
                     }
                 }
             });
@@ -104,7 +117,10 @@ globalThis.NumoriNetwork = (() => {
 
     async function open({ role, code, signal, onStatus, onMessage, onOpen, onClose } = {}) {
         if (!['host', 'guest'].includes(role)) throw new TypeError('room role');
-        if ((code != null && (typeof code !== 'string' || !/^\d{4}$/.test(code))) || (role === 'guest' && !code)) {
+        if (
+            (code != null && (typeof code !== 'string' || !/^\d{4}$/.test(code))) ||
+            (role === 'guest' && !code)
+        ) {
             throw networkError('invalid-code');
         }
         if (signal?.aborted) throw networkError('aborted');
@@ -180,7 +196,10 @@ globalThis.NumoriNetwork = (() => {
                         rtcConfig: {
                             iceServers: local
                                 ? []
-                                : [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:3478' }],
+                                : [
+                                      { urls: 'stun:stun.l.google.com:19302' },
+                                      { urls: 'stun:stun1.l.google.com:3478' },
+                                  ],
                         },
                         signalerFactory: discoveryAdapter(
                             local ? broadcastSignaler : NumoriGameKitTransport.createNostrSignaler,
@@ -227,7 +246,13 @@ globalThis.NumoriNetwork = (() => {
                 subscribe: (fn) => listen(packets, fn),
                 subscribeState: (fn) => listen(states, fn),
                 send(message) {
-                    if (terminal || room.state !== 'open' || !message || typeof message !== 'object') return false;
+                    if (
+                        terminal ||
+                        room.state !== 'open' ||
+                        !message ||
+                        typeof message !== 'object'
+                    )
+                        return false;
                     try {
                         return room.app.send(encoder.encode(JSON.stringify(message)));
                     } catch {
@@ -241,7 +266,9 @@ globalThis.NumoriNetwork = (() => {
         } catch (err) {
             signal?.removeEventListener('abort', abort);
             room?.close();
-            const reason = forcedReason ?? (controller.signal.aborted ? 'aborted' : err.code || 'relay-unavailable');
+            const reason =
+                forcedReason ??
+                (controller.signal.aborted ? 'aborted' : err.code || 'relay-unavailable');
             controller.abort();
             throw networkError(reason, err);
         }

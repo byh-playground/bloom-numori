@@ -1,0 +1,57 @@
+name: Verify source and deploy GitHub Pages
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: pages-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    source:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: '22'
+            - name: Verify and stage source references
+              run: python3 tools/pages-source.py "$RUNNER_TEMP/numori-pages"
+            - name: Validate BLOOM PLAYGROUND manifests
+              run: |
+                  curl --fail --silent --show-error --retry 3 \
+                      https://raw.githubusercontent.com/byh-playground/bloom-world/a14f2bf858b460507b44e992a7f1bb87e25ee345/playground/bloom-game.schema.json \
+                      --output "$RUNNER_TEMP/bloom-game.schema.json"
+                  npx --yes ajv-cli@5.0.0 validate --spec=draft2020 \
+                      -s "$RUNNER_TEMP/bloom-game.schema.json" \
+                      -d bloom-game.json -d "$RUNNER_TEMP/numori-pages/bloom-game.json"
+            - uses: actions/upload-pages-artifact@v4
+              if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+              with:
+                  path: ${{ runner.temp }}/numori-pages
+
+    deploy:
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        needs: source
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.publish.outputs.page_url }}
+        steps:
+            - uses: actions/configure-pages@v5
+            - name: Deploy original source
+              id: publish
+              uses: actions/deploy-pages@v4

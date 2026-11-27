@@ -92,7 +92,7 @@ p {
     z-index: -1;
     inset: 0;
     background-color: #f5e8bb;
-    background-image: url('COVER_IMAGE');
+    background-image: url('assets/shape-valley-title.webp');
     background-repeat: no-repeat;
     background-size: cover;
     background-position: 62% 52%;
@@ -102,7 +102,8 @@ p {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-inline: max(var(--cover-pad), env(safe-area-inset-left)) max(var(--cover-pad), env(safe-area-inset-right));
+    padding-inline: max(var(--cover-pad), env(safe-area-inset-left))
+        max(var(--cover-pad), env(safe-area-inset-right));
 }
 .title-nav {
     padding-block: max(16px, env(safe-area-inset-top)) 8px;
@@ -317,7 +318,7 @@ p {
     .title-scene {
         inset: 0 0 14%;
         background-color: #ffe6a0;
-        background-image: url('PORTRAIT_IMAGE');
+        background-image: url('assets/shape-valley-title-portrait.webp');
         background-size: 100% auto;
         background-position: center bottom;
     }
@@ -594,23 +595,6 @@ dialog label {
     right: 5px;
     top: 5px;
 }
-#toast {
-    pointer-events: none;
-    position: fixed;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-    padding: 7px 14px;
-    background: #183c30;
-    color: #fff8e6;
-    border-radius: 18px;
-    font-size: 13px;
-    opacity: 0;
-}
-#toast.on {
-    opacity: 1;
-}
 @media (max-width: 680px) and (orientation: portrait) {
     .arena-layout {
         display: flex;
@@ -751,7 +735,8 @@ dialog label {
 .field-switch {
     display: none;
 }
-@media (max-width: 680px) and (orientation: portrait), (max-height: 500px) and (orientation: landscape) {
+@media (max-width: 680px) and (orientation: portrait),
+    (max-height: 500px) and (orientation: landscape) {
     #gameScreen {
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
             env(safe-area-inset-left);
@@ -865,7 +850,8 @@ dialog label {
     min-height: 0;
     white-space: nowrap;
 }
-@media (max-width: 680px) and (orientation: portrait), (max-height: 500px) and (orientation: landscape) {
+@media (max-width: 680px) and (orientation: portrait),
+    (max-height: 500px) and (orientation: landscape) {
     .field-tools {
         top: 3px;
         right: 3px;
@@ -948,7 +934,8 @@ dialog label {
 [data-act='labor'][aria-expanded='true'] {
     background: #dcebd4;
 }
-@media (max-width: 680px) and (orientation: portrait), (max-height: 500px) and (orientation: landscape) {
+@media (max-width: 680px) and (orientation: portrait),
+    (max-height: 500px) and (orientation: landscape) {
     #laborPanel {
         top: 100%;
         bottom: auto;
@@ -1132,12 +1119,27 @@ dialog label {
 #launchReceipt[data-kind='capture'] strong {
     font-size: 12px;
 }
-#frameMeter{position:absolute;z-index:3;bottom:51px;left:5px;max-width:calc(100% - 10px);padding:3px 6px;border-radius:4px;background:#14382eef;color:#fff8dd;pointer-events:none;font:650 11px/1.35 system-ui,sans-serif;font-variant-numeric:tabular-nums}
+#frameMeter {
+    position: absolute;
+    z-index: 3;
+    bottom: 51px;
+    left: 5px;
+    max-width: calc(100% - 10px);
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #14382eef;
+    color: #fff8dd;
+    pointer-events: none;
+    font:
+        650 11px/1.35 system-ui,
+        sans-serif;
+    font-variant-numeric: tabular-nums;
+}
 
 #frontRoutes {
     flex: none;
     display: grid;
-    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
     gap: 3px;
     margin: 0 0 5px;
 }
@@ -1155,12 +1157,33 @@ dialog label {
     color: #294f42;
     touch-action: manipulation;
 }
-#frontRoutes button:disabled { opacity: 1; cursor: default; }
-#frontRoutes [data-route='supply'] { color: #724815; background: #fff6dd; border-color: #dec894; }
-#frontRoutes button > span { min-width: 0; display: grid; gap: 1px; }
-#frontRoutes b, #frontRoutes small { display: block; line-height: 1.2; white-space: nowrap; }
-#frontRoutes b { font-size: 14px; font-weight: 780; }
-#frontRoutes small { font-size: 11px; }
+#frontRoutes button:disabled {
+    opacity: 1;
+    cursor: default;
+}
+#frontRoutes [data-route='supply'] {
+    color: #724815;
+    background: #fff6dd;
+    border-color: #dec894;
+}
+#frontRoutes button > span {
+    min-width: 0;
+    display: grid;
+    gap: 1px;
+}
+#frontRoutes b,
+#frontRoutes small {
+    display: block;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+#frontRoutes b {
+    font-size: 14px;
+    font-weight: 780;
+}
+#frontRoutes small {
+    font-size: 11px;
+}
 #frontRoutes .giant-status {
     flex: none;
     margin-left: auto;
@@ -1171,31 +1194,113 @@ dialog label {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
-#giantPhaseLabel { font-weight: 650; opacity: .85; }
-#giantPhase { font-size: 13px; line-height: 1.05; }
-.front-bridge, .front-giant { position: relative; flex: 0 0 18px; width: 18px; height: 14px; }
-.front-bridge { border-bottom: 2px solid currentColor; }
-.front-bridge::before { content: ''; position: absolute; inset: 3px 0 -1px; border: 2px solid currentColor; border-radius: 8px 8px 0 0; }
-.front-bridge::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 0; height: 5px; border: 2px solid currentColor; border-bottom: 0; border-radius: 4px 4px 0 0; }
-.front-giant { border: 2px solid currentColor; border-radius: 6px 6px 4px 4px; }
-.front-giant::before, .front-giant::after { content: ''; position: absolute; background: currentColor; }
-.front-giant::before { width: 3px; height: 3px; border-radius: 50%; top: 4px; left: 3px; box-shadow: 5px 0 currentColor; }
-.front-giant::after { width: 6px; height: 2px; border-radius: 1px; top: -4px; left: 4px; }
-.field > #frontRoutes { margin: 0; padding: 2px 3px; background: #e3e9da; }
-@media (max-width: 680px) and (orientation: portrait), (max-height: 500px) and (orientation: landscape) {
-    #frontRoutes { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); margin-bottom: 2px; gap: 2px; }
-    #frontRoutes button { padding: 2px 6px; gap: 5px; border-radius: 4px; }
-    #frontRoutes b { font-size: 13px; }
-    #frontRoutes small { font-size: 10px; }
-    #frontRoutes .giant-status { padding-left: 4px; }
-    #giantPhase { font-size: 12px; }
+#giantPhaseLabel {
+    font-weight: 650;
+    opacity: 0.85;
+}
+#giantPhase {
+    font-size: 13px;
+    line-height: 1.05;
+}
+.front-bridge,
+.front-giant {
+    position: relative;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 14px;
+}
+.front-bridge {
+    border-bottom: 2px solid currentColor;
+}
+.front-bridge::before {
+    content: '';
+    position: absolute;
+    inset: 3px 0 -1px;
+    border: 2px solid currentColor;
+    border-radius: 8px 8px 0 0;
+}
+.front-bridge::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: 0;
+    height: 5px;
+    border: 2px solid currentColor;
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+}
+.front-giant {
+    border: 2px solid currentColor;
+    border-radius: 6px 6px 4px 4px;
+}
+.front-giant::before,
+.front-giant::after {
+    content: '';
+    position: absolute;
+    background: currentColor;
+}
+.front-giant::before {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    top: 4px;
+    left: 3px;
+    box-shadow: 5px 0 currentColor;
+}
+.front-giant::after {
+    width: 6px;
+    height: 2px;
+    border-radius: 1px;
+    top: -4px;
+    left: 4px;
+}
+.field > #frontRoutes {
+    margin: 0;
+    padding: 2px 3px;
+    background: #e3e9da;
+}
+@media (max-width: 680px) and (orientation: portrait),
+    (max-height: 500px) and (orientation: landscape) {
+    #frontRoutes {
+        grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+        margin-bottom: 2px;
+        gap: 2px;
+    }
+    #frontRoutes button {
+        padding: 2px 6px;
+        gap: 5px;
+        border-radius: 4px;
+    }
+    #frontRoutes b {
+        font-size: 13px;
+    }
+    #frontRoutes small {
+        font-size: 10px;
+    }
+    #frontRoutes .giant-status {
+        padding-left: 4px;
+    }
+    #giantPhase {
+        font-size: 12px;
+    }
 }
 @media (min-height: 365px) and (max-height: 380px) and (orientation: landscape) {
-    .desk { padding-block: 0; }
-    #fieldToolsDock:not(:empty) { margin-top: 0; }
-    #frontRoutes { margin-bottom: 1px; }
+    .desk {
+        padding-block: 0;
+    }
+    #fieldToolsDock:not(:empty) {
+        margin-top: 0;
+    }
+    #frontRoutes {
+        margin-bottom: 1px;
+    }
 }
 @media (max-height: 345px) and (max-width: 610px) and (orientation: landscape) {
-    .field > #frontRoutes i { display: none; }
-    #frontRoutes button { padding-inline: 4px; }
+    .field > #frontRoutes i {
+        display: none;
+    }
+    #frontRoutes button {
+        padding-inline: 4px;
+    }
 }

@@ -1,0 +1,14 @@
+{
+    "$schema": "https://byh-playground.github.io/bloom-world/playground/bloom-game.schema.json",
+    "schemaVersion": 1,
+    "title": "넘모리",
+    "en": "NUMORI",
+    "genre": "strategy",
+    "tags": ["수학", "실시간 전략", "멀티플레이"],
+    "desc": "사칙연산으로 목표 수를 맞혀 도형 병력을 소환하고 두 전선에서 싸우는 실시간 전략 게임입니다.",
+    "points": [
+        "수식을 완성해 병력을 출격",
+        "거인 제단을 차지해 거인 합류",
+        "네 자리 코드로 1대1 대전"
+    ]
+}
