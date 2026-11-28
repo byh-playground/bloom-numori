@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 require('../math.js');
 require('../vendor/gamekit-core.js');
 require('../battle.js');
+require('../ai-solver.js');
 require('../economy.js');
 
 const { num: n, op: o } = MathCore;
@@ -20,9 +21,11 @@ function integer(value) {
 
 // Delayed PvP starts must deploy the first paid wave behind the incoming enemy.
 for (const side of [0, 1]) {
-    const seed = 123, field = Battle.create(seed);
+    const seed = 123,
+        field = Battle.create(seed);
     const e = new Economy({ seed, battle: field, computerOpponent: false });
-    const dir = side === 0 ? 1 : -1, opponent = 1 - side;
+    const dir = side === 0 ? 1 : -1,
+        opponent = 1 - side;
     const launch = (team) => {
         const result = e.produce(team, 'summon', e.sides[team].summonWitness);
         assert.equal(result.actual, 24);
@@ -33,7 +36,9 @@ for (const side of [0, 1]) {
     for (const u of field.units) u.x = 1500 - dir * 650;
     const foeX = field.units[0].x;
     launch(side);
-    assert.ok(field.units.filter(u => u.side === side).every(u => (foeX - u.x) * dir >= 70 - 1e-8));
+    assert.ok(
+        field.units.filter((u) => u.side === side).every((u) => (foeX - u.x) * dir >= 70 - 1e-8),
+    );
     assert.equal(launch(side), field.bases[side].x + dir * 115);
     step(e, 20);
     assert.equal(e.sides[opponent].stats.produced, 24);
@@ -57,7 +62,8 @@ for (const side of [0, 1]) {
         [30, 'spear', 24, 1, 23, true],
     );
     assert.equal(e.battle.count(0), 1000);
-    for (const [k, q] of Object.entries({ ...paid.cost, '=': 1 })) assert.equal(s.inventory[k], before[k] - q);
+    for (const [k, q] of Object.entries({ ...paid.cost, '=': 1 }))
+        assert.equal(s.inventory[k], before[k] - q);
     const stock = { ...s.inventory },
         goal = s.targets.summon,
         witness = s.summonWitness;
@@ -107,9 +113,17 @@ for (const side of [0, 1]) {
         [9007199254740881, 'thrower'],
         [9007199254740991, 'archer'],
     ];
-    for (const [value, type] of cases) assert.equal(Economy.classify(MathCore.evaluate(integer(value))).unitType, type);
-    const tiny = Array.from({ length: 18 }, () => o('div', n(1), n(9))).reduce((left, right) => o('mul', left, right));
-    for (const ast of [o('add', n(8), tiny), integer(0), o('sub', n(1), n(4)), o('div', n(3), n(2))]) {
+    for (const [value, type] of cases)
+        assert.equal(Economy.classify(MathCore.evaluate(integer(value))).unitType, type);
+    const tiny = Array.from({ length: 18 }, () => o('div', n(1), n(9))).reduce((left, right) =>
+        o('mul', left, right),
+    );
+    for (const ast of [
+        o('add', n(8), tiny),
+        integer(0),
+        o('sub', n(1), n(4)),
+        o('div', n(3), n(2)),
+    ]) {
         assert.equal(MathCore.evaluate(ast).ok, true);
         assert.equal(Economy.classify(MathCore.evaluate(ast)), null);
     }
@@ -135,15 +149,23 @@ for (const side of [0, 1]) {
         side.inventory[digit] = 3;
         const stock = { ...side.inventory };
         const result = fixture.produce(0, 'summon', n(digit));
-        assert.deepEqual([result.ok, result.raw, result.actual, result.matched], [qty > 0, qty, qty, digit === 6]);
+        assert.deepEqual(
+            [result.ok, result.raw, result.actual, result.matched],
+            [qty > 0, qty, qty, digit === 6],
+        );
         assert.equal(fixture.battle.count(0), qty);
         if (digit === 6) assert.notEqual(side.targets.summon, 6);
         else assert.equal(side.targets.summon, 6);
         if (!qty) {
-            for (let i = 0; i < 4; i++) assert.equal(fixture.produce(0, 'summon', n(digit)).ok, false);
+            for (let i = 0; i < 4; i++)
+                assert.equal(fixture.produce(0, 'summon', n(digit)).ok, false);
             assert.deepEqual(side.inventory, stock);
         } else {
-            assert.deepEqual(side.inventory, { ...stock, [digit]: stock[digit] - 1, '=': stock['='] - 1 });
+            assert.deepEqual(side.inventory, {
+                ...stock,
+                [digit]: stock[digit] - 1,
+                '=': stock['='] - 1,
+            });
         }
     }
     // The command revalidates the current target and free army space, regardless of an older preview.
@@ -190,7 +212,10 @@ for (const side of [0, 1]) {
         p = e.sides[0],
         w = p.workers[0];
     assert.deepEqual(e.allocation(0), { mineral: 5, gas: 5, idle: 0 });
-    for (const mine of ['mineral', 'gas']) while (e.assign(0, mine, -1)) {}
+    for (const mine of ['mineral', 'gas'])
+        while (e.assign(0, mine, -1)) {
+            // Unassign the entire crew through the production API.
+        }
     step(e, 20);
     assert.equal(p.stats.deliveries, 0);
     assert.deepEqual(p.inventory, Economy.config.initial);
@@ -238,20 +263,27 @@ for (const side of [0, 1]) {
     );
 }
 {
-    const e = game(5, 'hard'), station = e.battle.station;
-    for (const side of [0, 1]) for (const kind of ['mineral', 'gas'])
-        while (e.assign(side, kind, -1)) {}
-    e.sides[0].inventory = {'=':2};
+    const e = game(5, 'hard'),
+        station = e.battle.station;
+    for (const side of [0, 1])
+        for (const kind of ['mineral', 'gas'])
+            while (e.assign(side, kind, -1)) {
+                // Isolate the giant recruitment from worker deliveries.
+            }
+    e.sides[0].inventory = { '=': 2 };
     e.refreshTarget(0);
-    const stock = e.sides.map(side => ({...side.inventory}));
-    e.battle.spawn(0, 'shield', 1, false, {route:'supply'});
-    Object.assign(e.battle.units[0], {x:station.x, y:station.y, waypoint:3});
-    for(let i=0;i<45*30;i++){
-        e.tick(1/30);
-        e.battle.step(1/30);
+    const stock = e.sides.map((side) => ({ ...side.inventory }));
+    e.battle.spawn(0, 'shield', 1, false, { route: 'supply' });
+    Object.assign(e.battle.units[0], { x: station.x, y: station.y, waypoint: 3 });
+    for (let i = 0; i < 45 * 30; i++) {
+        e.tick(1 / 30);
+        e.battle.step(1 / 30);
     }
     assert.deepEqual(station.recruits, [1, 0]);
-    assert.deepEqual(e.sides.map(side=>side.inventory), stock);
+    assert.deepEqual(
+        e.sides.map((side) => side.inventory),
+        stock,
+    );
     assert.equal(e.sides[0].targets.summon, null);
 }
 // Every chosen witness must fit the unreserved hand and use only basic operators.
@@ -260,9 +292,14 @@ for (const side of [0, 1]) {
         const s = e.sides[0],
             r = MathCore.evaluate(s.summonWitness);
         assert.equal(r.ok, true);
-        for (const [k, q] of Object.entries(r.cost)) assert.ok(q + (reserved[k] || 0) <= (s.inventory[k] || 0));
+        for (const [k, q] of Object.entries(r.cost))
+            assert.ok(q + (reserved[k] || 0) <= (s.inventory[k] || 0));
         assert.equal(e.preview(0, 'summon', s.summonWitness, reserved).matched, true);
-        assert.ok(Object.keys(r.cost).every((k) => !MathCore.ops[k] || ['add', 'sub', 'mul', 'div'].includes(k)));
+        assert.ok(
+            Object.keys(r.cost).every(
+                (k) => !MathCore.ops[k] || ['add', 'sub', 'mul', 'div'].includes(k),
+            ),
+        );
         const ops = Object.keys(MathCore.ops).reduce((a, k) => a + (r.cost[k] || 0), 0);
         assert.ok(ops <= 2);
         return ops;
@@ -318,7 +355,10 @@ for (const side of [0, 1]) {
     assert.deepEqual(e.config.mineralWeights, { 5: 1 });
     s.targets.summon = 10;
     const summon = e.produce(0, 'summon', o('add', n(5), n(5)));
-    assert.deepEqual([summon.ok, summon.value, summon.unitType, summon.actual], [true, 10, 'spear', 24]);
+    assert.deepEqual(
+        [summon.ok, summon.value, summon.unitType, summon.actual],
+        [true, 10, 'spear', 24],
+    );
     step(e, 10);
     assert.ok(s.stats.gathered[5] > 0);
     assert.equal(Object.hasOwn(s.stats.gathered, '0'), false);
@@ -330,12 +370,53 @@ for (const side of [0, 1]) {
     e.produce(0, 'summon', e.sides[0].summonWitness);
     step(e, 0.05);
     const cpu = e.sides[1];
+    assert.equal(e.aiWork.phase, 'solving');
+    assert.equal(cpu.stats.spent['='], undefined);
+    const preview = e.aiWork;
+    assert.equal(preview.revealed, 1);
+    assert.equal(preview.value, null);
+    step(e, 1.5);
     assert.equal(cpu.stats.spent['='], 1);
-    // This seed previously missed six consecutive affordable waves with the easy search budget.
-    for (let wave = 2; wave <= 7; wave++) {
-        step(e, e.ai.interval);
-        assert.equal(cpu.stats.spent['='], wave);
+    assert.equal(e.aiWork.phase, 'launched');
+    assert.deepEqual(e.aiWork.tokens, preview.tokens);
+    assert.equal(e.aiWork.target, preview.target);
+    const operatorIds = new Map(Object.values(MathCore.ops).map(({ symbol, id }) => [symbol, id]));
+    const expected = { '=': 1 };
+    for (const token of e.aiWork.tokens) {
+        if (token === '(' || token === ')') continue;
+        const key = operatorIds.get(token) ?? token;
+        expected[key] = (expected[key] || 0) + 1;
     }
+    assert.deepEqual(cpu.stats.spent, expected);
+    // This seed previously missed six consecutive affordable waves on easy.
+    step(e, 100);
+    assert.ok(cpu.stats.spent['='] >= 7);
+}
+{
+    const e = new Economy({
+        battle: Battle.create(123),
+        seed: 123,
+        config: { initialWorkersPerMine: 0 },
+    });
+    const cpu = e.sides[1];
+    cpu.inventory = { 2: 1, 3: 1, 5: 1, add: 1, mul: 1, '=': 1 };
+    cpu.targets.summon = 25;
+    cpu.summonWitness = n(9);
+    e.produce(0, 'summon', e.sides[0].summonWitness);
+    e.tick(1 / 30);
+    assert.equal(e.aiWork.phase, 'solving');
+    cpu.inventory['='] = 0; // The draft must be revalidated at the moment of dispatch.
+    step(e, 2);
+    assert.deepEqual(cpu.stats.spent, {});
+    assert.equal(e.aiWork.phase, 'waiting');
+    assert.equal(e.aiWork.reason, 'resources');
+    cpu.inventory['='] = 1;
+    e.tick(1 / 30);
+    assert.equal(e.aiWork.phase, 'solving');
+    step(e, 1.5);
+    assert.equal(e.aiWork.value, 25);
+    assert.equal(cpu.stats.produced, 24);
+    assert.deepEqual(cpu.stats.spent, { 2: 1, 3: 1, 5: 1, add: 1, mul: 1, '=': 1 });
 }
 {
     const e = new Economy({
@@ -419,7 +500,8 @@ function auditAI(difficulty) {
     assert.equal(s.workers.length, 10);
     return [s.stats.produced, s.stats.hits, s.stats.spent, s.targets];
 }
-for (const difficulty of ['easy', 'normal', 'hard']) assert.deepEqual(auditAI(difficulty), auditAI(difficulty));
+for (const difficulty of ['easy', 'normal', 'hard'])
+    assert.deepEqual(auditAI(difficulty), auditAI(difficulty));
 console.log(
     'PASS economy: army limit, integer production, physical gathering, reassignment, giant recruitment without free cargo, goals, AI spending and replay',
 );

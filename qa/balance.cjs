@@ -3,6 +3,7 @@ const { performance } = require('node:perf_hooks');
 require('../math.js');
 require('../vendor/gamekit-core.js');
 require('../battle.js');
+require('../ai-solver.js');
 require('../economy.js');
 const dt = 1 / 30;
 const seed = 100;
@@ -32,7 +33,7 @@ function run(difficulty, choose = null) {
         peak: b.stats.peak,
         maxTickMs: Math.round(maxStep),
         armyLimit: e.config.armyLimit,
-        workerDeliveries: e.sides.map(s => s.stats.deliveries),
+        workerDeliveries: e.sides.map((s) => s.stats.deliveries),
         playerTroops: e.sides[0].stats.produced,
         aiTroops: e.sides[1].stats.produced,
         targetHits: e.sides[0].stats.hits,
@@ -80,28 +81,41 @@ if (mode === 'strategies') {
 if (mode === 'matches') {
     for (const difficulty of ['easy', 'normal', 'hard']) {
         console.log(JSON.stringify({ controller: 'inactive', ...run(difficulty) }));
-        console.log(JSON.stringify({ controller: 'mixed', ...run(difficulty, (e) => e.decisions(0)) }));
+        console.log(
+            JSON.stringify({ controller: 'mixed', ...run(difficulty, (e) => e.decisions(0)) }),
+        );
     }
 }
 if (mode === 'mining') {
     const allocations = [
-        {mineral:5, gas:5},
-        {mineral:4, gas:6},
-        {mineral:6, gas:4},
+        { mineral: 5, gas: 5 },
+        { mineral: 4, gas: 6 },
+        { mineral: 6, gas: 4 },
         {},
     ];
     for (const allocation of allocations) {
         const b = Battle.create(seed);
-        const e = new Economy({battle:b, seed, difficulty:'easy'});
-        for (const kind of ['mineral','gas']) while (e.assign(0,kind,-1)) {}
-        for (const [kind,count] of Object.entries(allocation)) {
-            for (let i=0; i<count; i++) e.assign(0,kind,1);
+        const e = new Economy({ battle: b, seed, difficulty: 'easy' });
+        const current = e.allocation(0);
+        for (const kind of ['mineral', 'gas'])
+            for (let remaining = current[kind]; remaining > 0; remaining--) e.assign(0, kind, -1);
+        for (const [kind, count] of Object.entries(allocation)) {
+            for (let i = 0; i < count; i++) e.assign(0, kind, 1);
         }
-        for (let i=0; i<120/dt; i++) e.tick(dt);
-        const {gathered, deliveries} = e.sides[0].stats;
-        const numbers = MathCore.numbers.reduce((sum,key) => sum + (gathered[key] || 0), 0);
-        const blocks = Object.values(gathered).reduce((sum,n) => sum+n, 0);
-        if (!Object.keys(allocation).length && blocks) throw Error('Idle workers should deposit nothing');
-        console.log(JSON.stringify({allocation, workers:e.sides[0].workers.length, deliveries, numbers, gas:blocks-numbers}));
+        for (let i = 0; i < 120 / dt; i++) e.tick(dt);
+        const { gathered, deliveries } = e.sides[0].stats;
+        const numbers = MathCore.numbers.reduce((sum, key) => sum + (gathered[key] || 0), 0);
+        const blocks = Object.values(gathered).reduce((sum, n) => sum + n, 0);
+        if (!Object.keys(allocation).length && blocks)
+            throw Error('Idle workers should deposit nothing');
+        console.log(
+            JSON.stringify({
+                allocation,
+                workers: e.sides[0].workers.length,
+                deliveries,
+                numbers,
+                gas: blocks - numbers,
+            }),
+        );
     }
 }

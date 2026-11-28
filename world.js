@@ -1142,7 +1142,31 @@
         const captureLabel = captureCard.querySelector('.nr-capture-label');
         const captureRemaining = captureCard.querySelector('.nr-capture-remaining');
         const captureCount = captureCard.querySelector('.nr-capture-count');
-        container.append(terrainLayer, gpuLayer, field, mini, controls, captureCard);
+        const aiEquation = document.createElement('div');
+        aiEquation.className = 'nr-ai-equation';
+        aiEquation.hidden = true;
+        aiEquation.innerHTML =
+            '<header><strong class="nr-ai-heading"></strong><span class="nr-ai-target"></span></header>' +
+            '<div class="nr-ai-expression"><span class="nr-ai-tokens"></span><b class="nr-ai-value"></b></div>' +
+            '<small class="nr-ai-summary"></small>';
+        const aiHeading = aiEquation.querySelector('.nr-ai-heading');
+        const aiTarget = aiEquation.querySelector('.nr-ai-target');
+        const aiTokens = aiEquation.querySelector('.nr-ai-tokens');
+        const aiValue = aiEquation.querySelector('.nr-ai-value');
+        const aiSummary = aiEquation.querySelector('.nr-ai-summary');
+        const aiObstacles = [
+            ...(container
+                .closest('.arena-layout')
+                ?.querySelectorAll(
+                    '#enemyForces, .field-tools, #laborPanel, #guide, #targetHint, #launchReceipt, #frameMeter',
+                ) ?? []),
+            captureCard,
+            controls,
+            mini,
+        ];
+        let aiContent = '',
+            aiLayout = null;
+        container.append(terrainLayer, gpuLayer, field, mini, controls, captureCard, aiEquation);
         let device = null;
         let gpu = null;
         let fallbackReason = '';
@@ -2146,6 +2170,133 @@
                 'translate(' + Math.round(left) + 'px, ' + Math.round(top) + 'px)';
             return true;
         }
+        function updateAIEquation(base, work) {
+            if (!base?.hp || !work || work.reason === 'opening') {
+                aiEquation.hidden = true;
+                aiLayout = null;
+                return;
+            }
+
+            const waiting = work.phase === 'waiting';
+            const x = (base.x - cx) * zoom + viewW / 2;
+            const roof = ((base.y - cy) * K - 174) * zoom + viewH / 2;
+            if (waiting && (x < 5 || x > viewW - 5 || roof < 20 || roof >= viewH)) {
+                aiEquation.hidden = true;
+                return;
+            }
+            const tokens = work.tokens.slice(0, work.revealed);
+            const solved = !waiting && work.value != null && work.revealed === work.tokens.length;
+            const heading =
+                work.phase === 'launched'
+                    ? 'AI 출격'
+                    : !waiting
+                      ? 'AI 수식 풀이'
+                      : ({
+                            resources: 'AI 카드 수집 중',
+                            space: 'AI 병력 자리 대기',
+                            tactics: 'AI 다음 출격 준비',
+                        }[work.reason] ?? 'AI 대기');
+            const target = work.target == null ? '' : `목표 ${work.target}`;
+            const value = solved ? `= ${work.value}` : '';
+            const label = work.route === 'supply' ? '거인 전선' : '중앙 다리';
+            const summary = solved && work.route ? `${label} · ${work.count}마리` : '';
+            const content = JSON.stringify([work.phase, heading, target, tokens, value, summary]);
+
+            if (aiEquation.hidden) aiEquation.hidden = false;
+            if (aiContent !== content) {
+                aiContent = content;
+                aiLayout = null;
+                aiEquation.dataset.phase = work.phase;
+                aiHeading.textContent = heading;
+                aiTarget.textContent = target;
+                aiTokens.replaceChildren(
+                    ...tokens.map((token) => {
+                        const card = document.createElement('b');
+                        card.className = 'nr-ai-token';
+                        card.dataset.kind = /^\d+$/.test(token) ? 'number' : 'operator';
+                        card.textContent = token;
+                        return card;
+                    }),
+                );
+                aiValue.textContent = value;
+                aiSummary.textContent = summary;
+            }
+
+            // Reuse measured HUD bounds while the camera moves, except when an overlay opens or closes.
+            const visibility = aiObstacles.reduce((bits, node, i) => bits | (!node.hidden << i), 0);
+            if (
+                !aiLayout ||
+                aiLayout.viewW !== viewW ||
+                aiLayout.viewH !== viewH ||
+                aiLayout.visibility !== visibility ||
+                clock >= aiLayout.expires
+            ) {
+                const origin = container.getBoundingClientRect();
+                const obstacles = aiObstacles
+                    .map((node) => node.getBoundingClientRect())
+                    .filter(
+                        (rect) =>
+                            rect.width &&
+                            rect.height &&
+                            rect.right > origin.left &&
+                            rect.left < origin.right &&
+                            rect.bottom > origin.top &&
+                            rect.top < origin.bottom,
+                    )
+                    .map((rect) => ({
+                        left: rect.left - origin.left,
+                        right: rect.right - origin.left,
+                        top: rect.top - origin.top,
+                        bottom: rect.bottom - origin.top,
+                    }));
+                aiLayout = {
+                    viewW,
+                    viewH,
+                    visibility,
+                    obstacles,
+                    expires: clock + 0.12,
+                    width: aiEquation.offsetWidth,
+                    height: aiEquation.offsetHeight,
+                };
+            }
+            const { width, height, obstacles } = aiLayout;
+            const gap = 5;
+            const fits = (left, top) =>
+                left >= gap &&
+                left + width <= viewW - gap &&
+                top >= gap &&
+                top + height <= viewH - gap &&
+                !obstacles.some(
+                    (rect) =>
+                        left < rect.right + gap &&
+                        left + width > rect.left - gap &&
+                        top < rect.bottom + gap &&
+                        top + height > rect.top - gap,
+                );
+
+            const anchorLeft = clamp(Math.round(x - width / 2), gap, viewW - width - gap);
+            const anchorTop = Math.floor(roof - height - 16);
+            if (x >= gap && x < viewW - gap && roof < viewH && fits(anchorLeft, anchorTop)) {
+                aiEquation.dataset.placement = 'base';
+                aiEquation.style.transform = `translate(${anchorLeft}px, ${anchorTop}px)`;
+                aiEquation.style.setProperty('--ai-pointer', `${x - anchorLeft}px`);
+                return;
+            }
+            if (!waiting) {
+                const rows = [gap, ...obstacles.map((rect) => Math.ceil(rect.bottom) + gap)].sort(
+                    (a, b) => a - b,
+                );
+                const columns = [gap, Math.round((viewW - width) / 2), viewW - width - gap];
+                for (const top of rows) {
+                    const left = columns.find((column) => fits(column, top));
+                    if (left === undefined) continue;
+                    aiEquation.dataset.placement = 'field';
+                    aiEquation.style.transform = `translate(${left}px, ${top}px)`;
+                    return;
+                }
+            }
+            aiEquation.hidden = true;
+        }
         function drawCaptureProgress(n) {
             if (n.progress <= 0 || n.claimant < 0) return;
             const x = n.x,
@@ -3061,9 +3212,15 @@
                     tag(1500, y, '중앙 다리', -1);
                 }
             }
+            const aiWork = b?.winner === -1 ? e?.aiWork : null;
+            updateAIEquation(b?.bases[enemySide], aiWork);
             for (const launch of launches) {
-                if (launch && (launch.side !== localSide || scene.routeCue?.state !== 'dispatched'))
-                    drawLaunchCaption(launch);
+                if (!launch) continue;
+                const inHUD =
+                    launch.side === localSide
+                        ? scene.routeCue?.state === 'dispatched'
+                        : aiWork?.phase === 'launched' && !aiEquation.hidden;
+                if (!inHUD) drawLaunchCaption(launch);
             }
             if (miniAt < 0 || clock - miniAt > 0.12) {
                 drawMini(b, s);
@@ -3114,6 +3271,7 @@
                 terrainLayer.remove();
                 field.remove();
                 captureCard.remove();
+                aiEquation.remove();
                 mini.remove();
                 controls.remove();
                 delete container.dataset.renderer;

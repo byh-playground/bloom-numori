@@ -35,7 +35,7 @@ def click_script(page, source):
 
 def editor_setup(page):
     page.set_content('<meta charset="utf-8"><div id="fixture" style="width:440px"></div>')
-    for name in ("vendor/gamekit-core.js", "math.js", "battle.js", "economy.js", "editor.js"):
+    for name in ("vendor/gamekit-core.js", "math.js", "ai-solver.js", "battle.js", "economy.js", "editor.js"):
         page.add_script_tag(path=ROOT / name)
     if (ROOT / "editor.css").is_file():
         page.add_style_tag(path=ROOT / "editor.css")

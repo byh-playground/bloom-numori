@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 require('../vendor/gamekit-core.js');
 require('../math.js');
 require('../battle.js');
+require('../ai-solver.js');
 require('../economy.js');
 
 function play(route, side) {

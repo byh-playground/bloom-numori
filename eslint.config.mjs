@@ -9,6 +9,7 @@ const gameGlobals = {
     Economy: 'readonly',
     MathCore: 'readonly',
     NumoriActorRig: 'readonly',
+    NumoriAISolver: 'readonly',
     NumoriAudio: 'readonly',
     NumoriCombatFx: 'readonly',
     NumoriEditor: 'readonly',
