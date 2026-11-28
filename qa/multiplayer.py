@@ -132,8 +132,12 @@ async def summon(page, side, touch, route='bridge'):
     opening = await page.evaluate("s=>Numori.economy.sides[s].stats.firstProduction===null", side)
     await put_ast(page, ast, touch, [])
     await expect(page.locator('.ne-dispatch-count')).to_have_text('24마리')
-    if not opening:
+    if not opening and route == 'supply':
         await choose_route(page, route, touch)
+    expected_route = 'bridge' if opening else route
+    await expect(page.locator('[data-action="produce"]')).to_have_attribute(
+        'data-destination', expected_route,
+    )
     await press(page, '[data-action="produce"]', touch)
 
 

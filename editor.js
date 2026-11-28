@@ -99,8 +99,7 @@
         const reservations = () => sumCosts([state.root, ...state.stored]);
         const otherCosts = () => sumCosts(state.stored);
         const firstDispatch = () => options.firstDispatch?.() ?? true;
-        const dispatchRoute = () =>
-            firstDispatch() ? 'bridge' : (options.selectedRoute?.() ?? null);
+        const dispatchRoute = () => options.selectedRoute?.() ?? 'bridge';
         const routeName = (route) =>
             options.routeName?.(route) ?? (route === 'supply' ? '거인 전선' : '중앙 다리');
         const snapshot = () => {
@@ -182,7 +181,7 @@
         async function action(name) {
             if (name === 'produce') {
                 const route = dispatchRoute();
-                if (!state.root || !route) return;
+                if (!state.root) return;
                 let outcome = options.produce(state.root, otherCosts(), route);
                 if (outcome && typeof outcome.then === 'function') {
                     awaitingHost = true;
@@ -282,13 +281,12 @@
                 options.selectable?.(selectable);
             }
             const route = dispatchRoute();
-            const destination = route ? routeName(route) : '';
-            const awaitingRoute = valid && !route;
-            write('.ne-dispatch-label', valid && route ? escapeHtml(destination) : '출격 병력');
+            const destination = routeName(route);
+            write('.ne-dispatch-label', valid ? escapeHtml(destination) : '출격 병력');
             write('.ne-dispatch-count', decimalText(actual) + '마리');
             const dispatch = find('.ne-dispatch-cell');
             dispatch.classList.toggle('ready', actual > 0);
-            dispatch.dataset.destination = valid ? (route ?? '') : '';
+            dispatch.dataset.destination = valid ? route : '';
             const tiers = [
                 ['차이 2', base],
                 ['차이 1', near],
@@ -405,26 +403,19 @@
                     : '',
             );
             const launch = find('[data-action="produce"]');
-            launch.disabled = !valid || !route || awaitingHost || options.active?.() === false;
-            launch.dataset.destination = valid ? (route ?? '') : '';
-            launch.toggleAttribute('data-awaiting-route', awaitingRoute);
-            write(
-                '.ne-produce-arrow',
-                valid ? (route === 'supply' ? '↓' : route ? '↑' : '↗') : '=',
-            );
-            write(
-                '.ne-produce-label',
-                valid ? escapeHtml(destination || '전선 선택') : '출격 대기',
-            );
+            launch.disabled = !valid || awaitingHost || options.active?.() === false;
+            launch.dataset.destination = valid ? route : '';
+            write('.ne-produce-arrow', valid ? (route === 'supply' ? '↓' : '↑') : '=');
+            write('.ne-produce-label', valid ? escapeHtml(destination) : '출격 대기');
             write(
                 '.ne-produce-detail',
                 awaitingHost
                     ? '출격 확인 중'
                     : valid
-                      ? `${decimalText(actual)}마리 출격${route ? '' : ' 대기'}`
+                      ? `${decimalText(actual)}마리 출격`
                       : '등호 ' + (inventory['='] || 0) + '개',
             );
-            if (valid && route) {
+            if (valid) {
                 launch.setAttribute(
                     'aria-label',
                     `${destination} · ${unitName(preview)} ${decimalText(actual)}마리 출격`,

@@ -118,12 +118,14 @@ def trial(browser, source, out, view, route, baseline):
     type_tree(press,witness)
     assert page.locator(".ne-unit-count").inner_text().strip().startswith("24"), page.locator('#editor').inner_text()
     if not baseline:
-        assert launch.is_disabled()
+        assert launch.is_enabled() and launch.get_attribute('data-destination') == 'bridge'
+        assert page.locator('[data-route="bridge"]').get_attribute('aria-pressed') == 'true'
+        assert page.evaluate('Numori.routeCue') == {'route':'bridge','state':'selected'}
         ready=page.evaluate("""() => JSON.stringify({
             draft:Numori.editor.ast(), bank:Numori.economy.sides[0].inventory,
             produced:Numori.economy.sides[0].stats.produced
         })""")
-        for chosen in ('bridge' if route == 'supply' else 'supply', route):
+        for chosen in (('supply', 'bridge', 'supply') if route == 'supply' else ()):
             choose_route(page, press, chosen)
             assert page.evaluate('Numori.routeCue') == {'route':chosen,'state':'selected'}
             assert page.evaluate("""() => JSON.stringify({
@@ -151,6 +153,7 @@ def trial(browser, source, out, view, route, baseline):
         assert sample['route']==route, sample
         assert page.evaluate('Numori.routeCue') == {'route':route,'state':'dispatched'}
         assert launch.is_disabled()
+        assert page.locator('[data-route="bridge"]').get_attribute('aria-pressed') == 'true'
     frame(345)
     if route=='supply':
         visible_wave=page.evaluate("""() => {

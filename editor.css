@@ -1006,13 +1006,6 @@
 .numori-editor .ne-hint[aria-expanded='true'] {
     color: #ffdb8d;
 }
-.numori-editor .ne-produce[data-awaiting-route] {
-    background: #e9ece8;
-    color: #36483e;
-    border-style: dashed;
-    border-color: #78917f;
-    opacity: 1;
-}
 .numori-editor .ne-produce[data-destination='bridge']:not(:disabled) {
     background: var(--route-bridge, #206457);
     color: #fff;

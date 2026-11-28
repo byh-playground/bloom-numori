@@ -36,10 +36,10 @@ def run(browser, name, width, height, touch):
         if dest := environ.get("NUMORI_QA_SHOTS"):
             page.screenshot(path=Path(dest) / f"{name}-{stage}.png")
 
-    def dispatch(count, awaiting_route=False):
+    def dispatch(count):
         assert text(".ne-dispatch-count").replace(" ", "") == f"{count}마리"
         launch=page.locator('[data-action="produce"]')
-        enabled=count > 0 and not awaiting_route
+        enabled=count > 0
         assert launch.is_enabled() == enabled
         if enabled:
             assert re.search(rf"(?<!\d){count}\s*마리", launch.inner_text()), launch.inner_text()
@@ -285,14 +285,13 @@ def run(browser, name, width, height, touch):
     witness=page.evaluate("Numori.economy.summonHint(0,{})")
     assert witness
     type_tree(press,witness)
-    dispatch(24, awaiting_route=True)
+    dispatch(24)
+    assert launch.get_attribute('data-destination') == 'bridge'
     draft=page.evaluate("JSON.stringify(Numori.editor.ast())")
     produced="Numori.economy.sides[0].stats.produced"
     before_choice=page.evaluate(produced)
-    page.keyboard.press("Enter")
-    assert before_choice==page.evaluate(produced)
-    choose_route(page, press, 'bridge')
     choose_route(page, press, 'supply')
+    assert before_choice==page.evaluate(produced)
     assert draft==page.evaluate("JSON.stringify(Numori.editor.ast())")
     dispatch(24)
     for selector in ('[data-action="produce"]','[data-route="bridge"]','[data-route="supply"]'):
@@ -306,6 +305,7 @@ def run(browser, name, width, height, touch):
         page.keyboard.press("Enter")
     assert page.evaluate("Numori.economy.sides[0].stats.byRoute.supply") == 24
     assert launch.is_disabled()
+    assert page.locator('[data-route="bridge"]').get_attribute('aria-pressed') == 'true'
 
     # A separate match proves that recruiting a giant never changes the hand or worker roster.
     assert page.evaluate("""() => {

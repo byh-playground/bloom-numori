@@ -21,7 +21,7 @@
         () =>
             '정확히 맞혀 소환하면 다음 목표가 열려요. 일꾼이 본진에 가져온 숫자와 기호로 새 식을 만들어 보세요.',
         () =>
-            '두 번째부터 식을 완성한 뒤 출격할 전선을 고르세요. 선택한 길과 병력 수를 확인하고 출격을 누르세요.',
+            '수식을 완성하면 기본 전선인 중앙 다리로 출격할 준비가 돼요. 거인 전선으로 보내려면 그 카드를 누른 뒤 출격하세요.',
     ];
     let match,
         series,
@@ -41,7 +41,7 @@
         endShown = false;
     let hintGoal,
         receiptUntil = 0;
-    let selectedRoute = null,
+    let selectedRoute = 'bridge',
         routePayable = false,
         dispatched = null;
     let meterEnabled = params.get('perf') === '1';
@@ -148,7 +148,7 @@
         openPanel(
             '조작법 · 연산자',
             '<p>숫자 → 연산자 → 숫자를 누른 뒤 등호로 소환하세요. ‘수식 보관’을 누르면 지금 식을 두고 새 식을 시작해요. 보관한 값을 누르면 다시 사용할 수 있어요. 손패의 1~9 숫자와 +, −, ×, ÷로 목표를 만들어 보세요. 목표에서 2 이내인 양의 정수만 출격해요. 차이가 2면 8마리, 1이면 16마리, 정확히 맞추면 24마리예요. 범위 밖의 수식은 재료를 바꿔 다시 시도하세요. 병종은 수식 결과로 정해져요.</p>' +
-                '<p>첫 부대는 중앙 다리로 출격해요. 두 번째부터는 식을 완성하고 전선 카드를 누르세요. 전장에 표시된 길과 출격할 병력 수를 확인한 뒤 출격을 누르면 부대가 이동해요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
+                '<p>수식을 완성하면 기본 전선인 중앙 다리로 바로 출격할 수 있어요. 두 번째 부대부터는 거인 전선 카드를 눌러 이번 출격로를 바꿀 수 있어요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
                 giants +
                 '</p>' +
                 '<p>전선마다 방어 타워가 하나씩 있어요. 한 전선의 타워를 부수면 그 길로 적 본진까지 갈 수 있어요. 타워와 본진은 사거리 안의 적에게 0.2초마다 쏴요. 다섯 번째 탄은 곡사로 날아가 착탄 지점 주변의 적을 함께 때려요.</p>' +
@@ -409,7 +409,8 @@
         lastHud = -Infinity;
         lastFrame = 0;
         lastSound = {};
-        selectedRoute = dispatched = null;
+        selectedRoute = 'bridge';
+        dispatched = null;
         routePayable = false;
         $('#titleScreen').hidden = true;
         $('#gameScreen').hidden = false;
@@ -423,7 +424,7 @@
             selectable(payable) {
                 if (routePayable === payable) return;
                 routePayable = payable;
-                if (!payable) selectedRoute = null;
+                if (!payable) selectedRoute = 'bridge';
                 showRoutes();
             },
             targetGoal: () => economy.sides[localSide].targets.summon,
@@ -446,7 +447,7 @@
                 const finish = (p) => {
                     if (p?.ok && match === instance) {
                         dispatched = { route: p.route, time: battle.time };
-                        selectedRoute = null;
+                        selectedRoute = 'bridge';
                         routePayable = false;
                         showRoutes();
                         audio.play(p.matched ? 'bonus' : 'spawn');
@@ -587,8 +588,7 @@
     }
     function currentRouteCue() {
         if (!battle) return null;
-        if (selectedRoute) return { route: selectedRoute, state: 'selected' };
-        if (routePayable) return null;
+        if (routePayable) return { route: selectedRoute, state: 'selected' };
         if (dispatched && battle.time - dispatched.time < 5.4)
             return { route: dispatched.route, state: 'dispatched' };
         return null;
@@ -627,15 +627,10 @@
         const supply = $('[data-route="supply"]');
         const first = economy.sides[localSide].stats.firstProduction === null;
         supply.disabled = first;
-        bridge.setAttribute('aria-pressed', String(first || selectedRoute === 'bridge'));
+        bridge.setAttribute('aria-pressed', String(selectedRoute === 'bridge'));
         supply.setAttribute('aria-pressed', String(selectedRoute === 'supply'));
         $('#frontRoutes').toggleAttribute('data-choosing', routePayable);
-        const bridgeCaption = first
-            ? '첫 부대 출격'
-            : battle.towers[1 - localSide].bridge.hp > 0
-              ? '적 타워 → 본진'
-              : '적 본진 직행';
-        $('#bridgeOrder').textContent = bridgeCaption;
+        $('#bridgeOrder').textContent = first ? '첫 부대 출격' : '기본 전선';
         const action = routePayable ? ' 선택 · ' : ' 보기 · ';
         bridge.title = routeNames.bridge + action + routeDefense('bridge');
         supply.title = routeNames.supply + action + routeDefense('supply');
@@ -886,11 +881,6 @@
         } else if (e.key === 'Enter' || e.key === '=') {
             if (e.key === 'Enter' && e.target.matches('[data-route], [data-action="produce"]'))
                 return;
-            if (routePayable && !selectedRoute) {
-                e.preventDefault();
-                $('[data-route="bridge"]').focus();
-                return;
-            }
             node = $('[data-action="produce"]');
         } else if (e.key === 'Backspace' || (e.ctrlKey && e.key.toLowerCase() === 'z'))
             node = document.querySelector('[data-action="undo"]');
