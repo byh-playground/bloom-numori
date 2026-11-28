@@ -55,10 +55,16 @@ READ = """() => {
     const k = new NumoriGameKit.OrthographicProjection({degrees:48}).K;
     const roof = {
         x: field.left + width/2 + (base.x-x)*zoom,
-        y: field.top + height/2 + ((base.y-y)*k-106)*zoom
+        y: field.top + height/2 + ((base.y-y)*k-174)*zoom
     };
     const text = selector => card.querySelector(selector)?.textContent?.trim() || '';
     const result = card.dataset.phase;
+    const obstructed = [...document.querySelectorAll('.nr-camera,.nr-map,.field-tools,#enemyForces,#launchReceipt,#targetHint,#guide,.nr-capture-status')]
+        .filter(node => node.getClientRects().length)
+        .some(node => {
+            const other = node.getBoundingClientRect();
+            return box.left<other.right && box.right>other.left && box.top<other.bottom && box.bottom>other.top;
+        });
     let affordable = true;
     if (result === 'solving') {
         const cards = {'=':1}, inventory = economy.sides[1].inventory;
@@ -76,7 +82,7 @@ READ = """() => {
         inside:box.left >= field.left && box.right <= field.right &&
             box.top >= field.top && box.bottom <= field.bottom,
         aboveBase:Math.abs((box.left+box.right)/2-roof.x) < 50 && box.top < roof.y,
-        affordable, roof, camera:world.camera,
+        affordable, obstructed, roof, camera:world.camera,
         backend:world.renderStats.backend, draws:world.renderStats.drawCalls,
     };
 }"""
@@ -103,10 +109,11 @@ def trial(browser, origin, view, output, baseline):
             world.render({battle,economy,routeCue},0);
         }""")
 
-    def capture(name, placement, phase):
+    def capture(name, placements, phase):
         show()
         card = page.evaluate(READ)
-        assert card and card["inside"] and card["placement"] == placement, card
+        assert card and card["inside"] and not card["obstructed"], card
+        assert card["placement"] in placements, card
         assert card["phase"] == phase and card["work"]["phase"] == phase, card
         assert card["tokens"] == card["work"]["tokens"][:card["work"]["revealed"]], card
         assert card["affordable"], card
@@ -116,7 +123,7 @@ def trial(browser, origin, view, output, baseline):
             assert not card["value"], card
         else:
             assert str(card["work"]["value"]) in card["value"], card
-        if placement == "base":
+        if card["placement"] == "base":
             assert card["aboveBase"], card
         page.screenshot(path=output / f"{view}-{name}.png", timeout=20000)
         return card
@@ -154,7 +161,7 @@ def trial(browser, origin, view, output, baseline):
         assert not page.evaluate("window.aiPayments.length"), "AI paid before its equation was visible"
         stock = page.evaluate("({...Numori.economy.sides[1].inventory})")
         assert all(stock.get(key, 0) >= count for key, count in unspent.items()), (stock, unspent)
-        cards["field"] = capture("solving-offscreen", "field", "solving")
+        cards["field"] = capture("solving-offscreen", ("field",), "solving")
         # Leave enough screen space above the HQ roof for its bubble in short layouts.
         for _ in range(6):
             if page.evaluate("Numori.world.camera.zoom") <= 0.7:
@@ -176,12 +183,14 @@ def trial(browser, origin, view, output, baseline):
         assert y is not None, mini
         # Touch target adjustment otherwise snaps very small minimap taps to the nearby home control.
         page.mouse.click(x, y)
-        cards["base"] = capture("solving-at-base", "base", "solving")
+        # The shortest field can reserve the anchor space for its own launch receipt.
+        at_hq = ("base", "field") if view == "short" else ("base",)
+        cards["base"] = capture("solving-at-base", at_hq, "solving")
         until("()=>{const w=Numori.economy.aiWork;return w.phase==='solving' && w.value!=null}", 90)
-        cards["solved"] = capture("solved-at-base", "base", "solving")
+        cards["solved"] = capture("solved-at-base", at_hq, "solving")
         assert not page.evaluate("window.aiPayments.length"), "AI paid before its solution was displayed"
         until("()=>window.aiPayments.length>=1", 90)
-        cards["deployed"] = capture("deployed-at-base", "base", "launched")
+        cards["deployed"] = capture("deployed-at-base", at_hq, "launched")
         first = page.evaluate("window.aiPayments[0]")
         assert "".join(first["formula"].split()) == "".join(cards["deployed"]["tokens"]), (first, cards)
         assert cards["base"]["tokens"] == cards["deployed"]["tokens"][:len(cards["base"]["tokens"])]
