@@ -57,6 +57,15 @@ def type_tree(press, ast):
             type_tree(press, child)
 
 
+def choose_route(page, press, route):
+    selector = f'[data-route="{route}"]'
+    press(selector)
+    assert page.locator(selector).get_attribute('aria-pressed') == 'true'
+    launch = page.locator('[data-action="produce"]')
+    assert launch.is_enabled() and launch.get_attribute('data-destination') == route
+    assert ('중앙 다리' if route == 'bridge' else '거인 전선') in launch.inner_text()
+
+
 def trial(browser, source, out, view, route, baseline):
     width, height = SCREENS[view]
     touch = view != "desktop"
@@ -71,6 +80,10 @@ def trial(browser, source, out, view, route, baseline):
         button=page.locator(selector).first
         (button.tap if touch else button.click)(timeout=4500)
     def shot(name):
+        page.evaluate("""() => {
+            const {world,battle,economy,routeCue}=Numori;
+            world.render({battle,economy,routeCue},0);
+        }""")
         page.screenshot(path=out/f"{stem}-{name}.png",timeout=20000)
     def frame(tick):
         page.evaluate("tick=>{while(Numori.battle.tick<tick && Numori.battle.winner<0)openingFrame()}",tick)
@@ -85,9 +98,9 @@ def trial(browser, source, out, view, route, baseline):
     page.evaluate(OBSERVE)
     page.evaluate("window.roadSample="+SAMPLE)
     frame(120)
+    launch=page.locator('[data-action="produce"]')
     if not baseline:
-        supply_order=page.locator('[data-action="produce-supply"]')
-        assert supply_order.count()==0 or not supply_order.is_visible() or not supply_order.is_enabled()
+        assert launch.is_disabled()
     for key in ['[data-number="8"]','[data-op="mul"]','[data-number="4"]']:
         press(key)
     press('[data-action="produce"]')
@@ -98,38 +111,37 @@ def trial(browser, source, out, view, route, baseline):
     assert first['hit']['sourceScreen']['visible'] and first['hit']['targetScreen']['visible'],first
     frame(262)
     if not baseline:
-        assert page.locator('[data-route="supply"]').is_enabled()
-        assert not supply_order.is_visible() or not supply_order.is_enabled()
+        assert launch.is_disabled()
     frame(270)
     witness=page.evaluate("Numori.economy.summonHint(0,{})")
     goal=page.evaluate("Numori.economy.sides[0].targets.summon")
     type_tree(press,witness)
     assert page.locator(".ne-unit-count").inner_text().strip().startswith("24"), page.locator('#editor').inner_text()
     if not baseline:
+        assert launch.is_disabled()
         ready=page.evaluate("""() => JSON.stringify({
             draft:Numori.editor.ast(), bank:Numori.economy.sides[0].inventory,
             produced:Numori.economy.sides[0].stats.produced
         })""")
-        for inspect in ('supply','bridge'):
-            press(f'[data-route="{inspect}"]')
+        for chosen in ('bridge' if route == 'supply' else 'supply', route):
+            choose_route(page, press, chosen)
+            assert page.evaluate('Numori.routeCue') == {'route':chosen,'state':'selected'}
             assert page.evaluate("""() => JSON.stringify({
                 draft:Numori.editor.ast(), bank:Numori.economy.sides[0].inventory,
                 produced:Numori.economy.sides[0].stats.produced
             })""")==ready
-        assert supply_order.is_visible() and supply_order.is_enabled()
     assert page.evaluate("!document.documentElement.scrollLeft && document.documentElement.scrollWidth<=innerWidth")
     page.evaluate("window.waveFirst=Numori.battle.nextId")
     def box(sel):
         return page.locator(sel).first.bounding_box()
     boxes={key:box(key) for key in ['.nr-field','.ne-goal','.ne-unit-count','[data-number="1"]','[data-number="9"]','[data-action="produce"]']}
     if not baseline:
-        for key in ['[data-route="supply"]','[data-route="bridge"]','[data-action="produce-supply"]']:
+        for key in ['[data-route="supply"]','[data-route="bridge"]']:
             boxes[key]=box(key)
         assert all(r and r['height'] and r['x']>=-1 and r['x']+r['width']<=width+1 and
                    r['y']>=-1 and r['y']+r['height']<=height+1 for r in boxes.values()), boxes
     shot('ready')
-    action='produce-supply' if route=='supply' and not baseline else 'produce'
-    press(f'[data-action="{action}"]')
+    press('[data-action="produce"]')
     sample=page.evaluate("""() => {
         window.waveIds=new Set(Numori.battle.units.filter(u=>u.id>=waveFirst&&u.side===0).map(u=>u.id));
         return roadSample();
@@ -137,7 +149,8 @@ def trial(browser, source, out, view, route, baseline):
     assert sample['group']==24, sample
     if not baseline:
         assert sample['route']==route, sample
-        assert not supply_order.is_visible() or not supply_order.is_enabled()
+        assert page.evaluate('Numori.routeCue') == {'route':route,'state':'dispatched'}
+        assert launch.is_disabled()
     frame(345)
     if route=='supply':
         visible_wave=page.evaluate("""() => {
@@ -161,7 +174,8 @@ def trial(browser, source, out, view, route, baseline):
         recruitment=result['recruitment']
         page.evaluate("""() => {
             Numori.advance(0);
-            Numori.world.render({battle:Numori.battle,economy:Numori.economy},1/30);
+            const {world,battle,economy,routeCue}=Numori;
+            world.render({battle,economy,routeCue},1/30);
         }""")
         if seconds==23:
             shot('map')
@@ -172,7 +186,8 @@ def trial(browser, source, out, view, route, baseline):
         reinforcement=page.evaluate("Numori.economy.summonHint(0,{})")
         if reinforcement and page.evaluate("Numori.economy.sides[0].inventory['=']>0"):
             type_tree(press,reinforcement)
-            press(f'[data-action="{action}"]')
+            choose_route(page, press, route)
+            press('[data-action="produce"]')
     if recruitment:
         result['recruitment']=recruitment
         frame(page.evaluate('Numori.battle.tick')+8)

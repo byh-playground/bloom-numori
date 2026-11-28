@@ -443,9 +443,19 @@
     border-left: 2px solid #babaac;
 }
 .ne-pair .ne-dispatch-cell.ready {
-    background: #ffdf93;
-    color: #452e0e;
-    border-color: #cc8b31;
+    background: #e9ece8;
+    color: #36483e;
+    border-color: #78917f;
+}
+.ne-pair .ne-dispatch-cell.ready[data-destination='bridge'] {
+    background: var(--route-bridge-soft, #def1ea);
+    color: var(--route-bridge, #206457);
+    border-color: var(--route-bridge, #206457);
+}
+.ne-pair .ne-dispatch-cell.ready[data-destination='supply'] {
+    background: var(--route-supply-soft, #ffedcb);
+    color: var(--route-supply, #7b511e);
+    border-color: var(--route-supply, #7b511e);
 }
 .ne-pair .ne-dispatch-count {
     margin: 0;
@@ -996,49 +1006,18 @@
 .numori-editor .ne-hint[aria-expanded='true'] {
     color: #ffdb8d;
 }
-.ne-deploy .ne-launch-options {
-    display: grid;
-    grid-area: 3 / 2;
-    min-width: 0;
+.numori-editor .ne-produce[data-awaiting-route] {
+    background: #e9ece8;
+    color: #36483e;
+    border-style: dashed;
+    border-color: #78917f;
+    opacity: 1;
 }
-.ne-deploy .ne-launch-options[data-split] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3px;
+.numori-editor .ne-produce[data-destination='bridge']:not(:disabled) {
+    background: var(--route-bridge, #206457);
+    color: #fff;
 }
-.ne-deploy .ne-launch-options .ne-produce {
-    grid-area: auto;
-    min-width: 0;
-}
-.numori-editor .ne-keyboard .ne-launch-options[data-split] .ne-produce {
-    grid-template-columns: 1fr;
-    grid-template-rows: 15px 12px;
-    justify-items: center;
-    padding-inline: 2px;
-    font-size: clamp(11px, 2.5vw, 14px);
-    white-space: nowrap;
-}
-.ne-launch-options[data-split] .ne-produce b {
-    display: none;
-}
-.ne-launch-options[data-split] .ne-produce span {
-    grid-area: 1 / 1;
-}
-.ne-launch-options[data-split] .ne-produce small {
-    grid-area: 2 / 1;
-    opacity: .88;
-}
-.numori-editor .ne-launch-options [data-dispatch-route='supply']:not(:disabled) {
-    background: #7b511e;
+.numori-editor .ne-produce[data-destination='supply']:not(:disabled) {
+    background: var(--route-supply, #7b511e);
     color: #fff9e6;
-}
-@media (max-width: 680px) and (orientation: portrait),
-    (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
-    .ne-deploy .ne-launch-options {
-        grid-row: 4;
-    }
-}
-@media (max-width: 680px) and (orientation: portrait) {
-    .numori-editor:has(.ne-foot:not([hidden])) .ne-launch-options {
-        grid-row: 5;
-    }
 }

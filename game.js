@@ -6,6 +6,7 @@
         modal = $('#modal'),
         params = new URLSearchParams(location.search);
     const mines = { mineral: '미네랄', gas: '가스' };
+    const routeNames = { bridge: '중앙 다리', supply: '거인 전선' };
     const lessons = [
         () =>
             `이번 목표는 ${economy.sides[localSide].targets.summon}이에요. 숫자 광석을 하나 눌러 식을 시작하세요.`,
@@ -20,7 +21,7 @@
         () =>
             '정확히 맞혀 소환하면 다음 목표가 열려요. 일꾼이 본진에 가져온 숫자와 기호로 새 식을 만들어 보세요.',
         () =>
-            '두 번째부터 식을 완성하면 출격 버튼이 두 개 보여요. 거인 전선에서는 병력 우세를 30초 유지하면 거인이 아군에 합류해요.',
+            '두 번째부터 식을 완성한 뒤 출격할 전선을 고르세요. 선택한 길과 병력 수를 확인하고 출격을 누르세요.',
     ];
     let match,
         series,
@@ -40,6 +41,9 @@
         endShown = false;
     let hintGoal,
         receiptUntil = 0;
+    let selectedRoute = null,
+        routePayable = false,
+        dispatched = null;
     let meterEnabled = params.get('perf') === '1';
     const frameIntervals = [];
     let meterAt = -Infinity;
@@ -144,7 +148,7 @@
         openPanel(
             '조작법 · 연산자',
             '<p>숫자 → 연산자 → 숫자를 누른 뒤 등호로 소환하세요. ‘수식 보관’을 누르면 지금 식을 두고 새 식을 시작해요. 보관한 값을 누르면 다시 사용할 수 있어요. 손패의 1~9 숫자와 +, −, ×, ÷로 목표를 만들어 보세요. 목표에서 2 이내인 양의 정수만 출격해요. 차이가 2면 8마리, 1이면 16마리, 정확히 맞추면 24마리예요. 범위 밖의 수식은 재료를 바꿔 다시 시도하세요. 병종은 수식 결과로 정해져요.</p>' +
-                '<p>첫 부대는 중앙 다리로 출격해요. 두 번째부터는 식을 완성한 뒤 중앙 다리나 거인 전선 버튼을 눌러 출격해요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
+                '<p>첫 부대는 중앙 다리로 출격해요. 두 번째부터는 식을 완성하고 전선 카드를 누르세요. 전장에 표시된 길과 출격할 병력 수를 확인한 뒤 출격을 누르면 부대가 이동해요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
                 giants +
                 '</p>' +
                 '<p>전선마다 방어 타워가 하나씩 있어요. 한 전선의 타워를 부수면 그 길로 적 본진까지 갈 수 있어요. 타워와 본진은 사거리 안의 적에게 0.2초마다 쏴요. 다섯 번째 탄은 곡사로 날아가 착탄 지점 주변의 적을 함께 때려요.</p>' +
@@ -232,26 +236,11 @@
         receipt.hidden = false;
         receiptUntil = battle.time + (kind === 'capture' ? 1.8 : 2.4);
     }
-    function showLaunchReceipt(ast, outcome) {
-        if (outcome.route === 'supply') {
-            showFieldReceipt(
-                '거인 전선으로 이동',
-                Battle.types[outcome.unitType].name + ' ' + outcome.actual + '마리 출격',
-            );
-            return;
-        }
-        if (!outcome.matched) return;
-        const launch = battle.effects.findLast(
-            (effect) => effect.kind === 'bonus' && effect.side === localSide,
-        );
-        if (world.canShowLaunch(launch)) {
-            $('#launchReceipt').hidden = true;
-            receiptUntil = 0;
-            return;
-        }
+    function showLaunchReceipt(outcome) {
         showFieldReceipt(
-            MathCore.format(ast) + ' = ' + outcome.target,
+            routeNames[outcome.route] + ' · 이동 중',
             Battle.types[outcome.unitType].name + ' ' + outcome.actual + '마리 출격',
+            outcome.route,
         );
     }
     function closeHint() {
@@ -420,6 +409,8 @@
         lastHud = -Infinity;
         lastFrame = 0;
         lastSound = {};
+        selectedRoute = dispatched = null;
+        routePayable = false;
         $('#titleScreen').hidden = true;
         $('#gameScreen').hidden = false;
         fieldFocus(false);
@@ -427,6 +418,14 @@
         editor = NumoriEditor.mount($('#editor'), {
             inventory: () => economy.sides[localSide].inventory,
             firstDispatch: () => economy.sides[localSide].stats.firstProduction === null,
+            selectedRoute: () => selectedRoute,
+            routeName: (route) => routeNames[route],
+            selectable(payable) {
+                if (routePayable === payable) return;
+                routePayable = payable;
+                if (!payable) selectedRoute = null;
+                showRoutes();
+            },
             targetGoal: () => economy.sides[localSide].targets.summon,
             active,
             unitMatchup: (type) => {
@@ -443,13 +442,17 @@
             preview: (ast, res) => economy.preview(localSide, 'summon', ast, res),
             produce: (ast, res, route) => {
                 if (!active()) return { ok: false, reason: '경기를 재개하세요.' };
+                const opening = economy.sides[localSide].stats.firstProduction === null;
                 const finish = (p) => {
                     if (p?.ok && match === instance) {
+                        dispatched = { route: p.route, time: battle.time };
+                        selectedRoute = null;
+                        routePayable = false;
                         showRoutes();
                         audio.play(p.matched ? 'bonus' : 'spawn');
-                        if (p.route === 'supply') world.followSupplyDeployment();
-                        else world.followFirstDeployment();
-                        showLaunchReceipt(ast, p);
+                        if (opening) world.followFirstDeployment();
+                        else world.followDeployment(p.route);
+                        showLaunchReceipt(p);
                         closeHint();
                         if (lesson >= 0 && lesson <= 2) guide(3);
                     }
@@ -508,7 +511,7 @@
             canAdvance: () => !paused && battle.winner < 0,
             render: ({ frameTimeMs: t }) => {
                 world.render(
-                    { battle, economy },
+                    { battle, economy, routeCue: currentRouteCue() },
                     lastFrame ? Math.min(0.12, (t - lastFrame) / 1000) : 0,
                 );
                 showMeter(t, lastFrame ? t - lastFrame : 0);
@@ -582,14 +585,33 @@
             'result',
         );
     }
-    function viewRoute(route) {
+    function currentRouteCue() {
+        if (!battle) return null;
+        if (selectedRoute) return { route: selectedRoute, state: 'selected' };
+        if (routePayable) return null;
+        if (dispatched && battle.time - dispatched.time < 5.4)
+            return { route: dispatched.route, state: 'dispatched' };
+        return null;
+    }
+    function viewRoute(route, keyboard) {
         if (
             !active() ||
             !['bridge', 'supply'].includes(route) ||
             $('#editor').hasAttribute('aria-busy')
         )
             return;
-        if (route === 'supply') world.supply();
+        if (routePayable) {
+            selectedRoute = route;
+            const receipt = $('#launchReceipt');
+            if (!receipt.hidden && receipt.dataset.kind !== 'capture') {
+                receipt.hidden = true;
+                receiptUntil = 0;
+            }
+            world.route(route);
+            showRoutes();
+            editor.refresh();
+            if (keyboard) $('[data-action="produce"]').focus();
+        } else if (route === 'supply') world.supply();
         else world.battle();
     }
     function routeDefense(route) {
@@ -605,14 +627,18 @@
         const supply = $('[data-route="supply"]');
         const first = economy.sides[localSide].stats.firstProduction === null;
         supply.disabled = first;
+        bridge.setAttribute('aria-pressed', String(first || selectedRoute === 'bridge'));
+        supply.setAttribute('aria-pressed', String(selectedRoute === 'supply'));
+        $('#frontRoutes').toggleAttribute('data-choosing', routePayable);
         const bridgeCaption = first
             ? '첫 부대 출격'
             : battle.towers[1 - localSide].bridge.hp > 0
               ? '적 타워 → 본진'
               : '적 본진 직행';
         $('#bridgeOrder').textContent = bridgeCaption;
-        bridge.title = '중앙 다리 보기 · ' + routeDefense('bridge');
-        supply.title = '거인 전선 보기 · ' + routeDefense('supply');
+        const action = routePayable ? ' 선택 · ' : ' 보기 · ';
+        bridge.title = routeNames.bridge + action + routeDefense('bridge');
+        supply.title = routeNames.supply + action + routeDefense('supply');
         showGiantStatus(station);
     }
     function showGiantStatus(station) {
@@ -716,7 +742,7 @@
         if (!b) return;
         audio.unlock();
         if (b.dataset.route) {
-            viewRoute(b.dataset.route);
+            viewRoute(b.dataset.route, e.detail === 0);
             return;
         }
         if (b.dataset.level) {
@@ -858,8 +884,14 @@
                 '[data-op="' + { '+': 'add', '-': 'sub', '*': 'mul', '/': 'div' }[e.key] + '"]',
             );
         } else if (e.key === 'Enter' || e.key === '=') {
-            if (e.key === 'Enter' && e.target.matches('[data-dispatch-route]')) return;
-            node = document.querySelector('[data-dispatch-route="bridge"]');
+            if (e.key === 'Enter' && e.target.matches('[data-route], [data-action="produce"]'))
+                return;
+            if (routePayable && !selectedRoute) {
+                e.preventDefault();
+                $('[data-route="bridge"]').focus();
+                return;
+            }
+            node = $('[data-action="produce"]');
         } else if (e.key === 'Backspace' || (e.ctrlKey && e.key.toLowerCase() === 'z'))
             node = document.querySelector('[data-action="undo"]');
         if (node) {
@@ -906,6 +938,9 @@
             },
             get world() {
                 return world;
+            },
+            get routeCue() {
+                return currentRouteCue();
             },
             advance(n) {
                 for (let i = 0; i < n && battle?.winner === -1; i++) step();

@@ -7,7 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from playwright.sync_api import sync_playwright
 
 from opening import CLOCK, OBSERVE, VISIBILITY
-from two_fronts import SCREENS, type_tree
+from two_fronts import SCREENS, choose_route, type_tree
 
 
 WATCH = """() => {
@@ -77,7 +77,8 @@ def run_trial(browser, source, out, view, route):
     def refresh():
         return page.evaluate("""() => {
             Numori.advance(0);
-            Numori.world.render({battle:Numori.battle,economy:Numori.economy},1/30);
+            const {world,battle,economy,routeCue}=Numori;
+            world.render({battle,economy,routeCue},1/30);
             return Numori.world.renderStats;
         }""")
 
@@ -95,7 +96,9 @@ def run_trial(browser, source, out, view, route):
     def pay(witness, lane='bridge'):
         type_tree(press,witness)
         assert page.locator('.ne-unit-count').inner_text().strip().startswith('24')
-        press(f'[data-dispatch-route="{lane}"]')
+        if page.evaluate("Numori.economy.sides[0].stats.firstProduction!==null"):
+            choose_route(page, press, lane)
+        press('[data-action="produce"]')
 
     press('[data-level="normal"]')
     page.evaluate(CLOCK)
@@ -104,8 +107,7 @@ def run_trial(browser, source, out, view, route):
     page.evaluate('restoreOpeningRaf()')
     page.evaluate(OBSERVE)
     page.evaluate(WATCH)
-    supply_order = page.locator('[data-action="produce-supply"]')
-    assert supply_order.count()==0 or not supply_order.is_enabled() or not supply_order.is_visible()
+    assert page.locator('[data-action="produce"]').is_disabled()
     assert page.locator('#stationEta,#stationReward,#stationOwner').count()==0
     initial=page.evaluate("Numori.battle.station.giantKind")
     assert initial in ('bulwark','breaker','lobber'),initial
@@ -123,11 +125,12 @@ def run_trial(browser, source, out, view, route):
     assert witness
     type_tree(press,witness)
     assert page.locator('.ne-unit-count').inner_text().strip().startswith('24')
+    choose_route(page, press, route)
     for selector in ('[data-route="supply"]','#giantName','.ne-unit-count',
-                     '[data-dispatch-route="bridge"]','[data-dispatch-route="supply"]'):
+                     '[data-route="bridge"]','[data-action="produce"]'):
         assert_box(page,selector,width,height)
     capture('selected')
-    press(f'[data-dispatch-route="{route}"]')
+    press('[data-action="produce"]')
     assert page.evaluate("(route) => Numori.economy.sides[0].stats.byRoute[route]",route)==(24 if route=='supply' else 48)
 
     capture('march')

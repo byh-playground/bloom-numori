@@ -7,7 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from playwright.sync_api import sync_playwright
 
 from opening import CLOCK, OBSERVE, VISIBILITY
-from two_fronts import SCREENS, type_tree
+from two_fronts import SCREENS, choose_route, type_tree
 
 
 OBSERVE_DEFENSE = """() => {
@@ -51,7 +51,8 @@ def run_trial(browser, source, out, view, route, baseline, weak=None):
     def show():
         page.evaluate("""() => {
             Numori.advance(0);
-            Numori.world.render({battle:Numori.battle,economy:Numori.economy},1/30);
+            const {world,battle,economy,routeCue}=Numori;
+            world.render({battle,economy,routeCue},1/30);
         }""")
 
     def shot(label):
@@ -72,10 +73,12 @@ def run_trial(browser, source, out, view, route, baseline, weak=None):
         ast = page.evaluate("() => Numori.economy.summonHint(0,{})")
         if not ast or not page.evaluate("() => Numori.economy.sides[0].inventory['=']>0"):
             return None
-        if lane=='supply':
+        if baseline and lane=='supply':
             press('[data-route="supply"]')
         type_tree(press,ast)
         assert page.locator(".ne-unit-count").inner_text().strip().startswith('24')
+        if not baseline:
+            choose_route(page, press, lane)
         press('[data-action="produce"]')
         return ast
 

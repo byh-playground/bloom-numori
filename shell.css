@@ -1000,6 +1000,9 @@ dialog label {
     text-align: center;
     pointer-events: none;
 }
+.field:has(> #frontRoutes) #launchReceipt:not([data-kind='capture']) {
+    bottom: calc(52px + var(--route-card-height) + 14px);
+}
 #launchReceipt .launch-equation {
     overflow-wrap: anywhere;
     font-size: 12px;
@@ -1111,6 +1114,12 @@ dialog label {
 #launchReceipt[data-kind='capture'] strong {
     font-size: 12px;
 }
+#launchReceipt[data-kind='bridge'] .launch-equation {
+    color: #95f4de;
+}
+#launchReceipt[data-kind='supply'] .launch-equation {
+    color: #ffcf7d;
+}
 #frameMeter {
     position: absolute;
     z-index: 3;
@@ -1140,7 +1149,7 @@ dialog label {
     align-items: center;
     gap: 8px;
     min-width: 0;
-    min-height: 44px;
+    min-height: var(--route-card-height);
     padding: 4px 9px;
     text-align: left;
     border: 1px solid #becbbf;
@@ -1148,6 +1157,7 @@ dialog label {
     background: #f7faf3;
     color: #294f42;
     touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 #frontRoutes button:disabled {
     opacity: 1;
@@ -1157,6 +1167,33 @@ dialog label {
     color: #724815;
     background: #fff6dd;
     border-color: #dec894;
+}
+#gameScreen {
+    --route-card-height: 44px;
+    --route-bridge: #206457;
+    --route-bridge-soft: #e4f4ed;
+    --route-supply: #7b511e;
+    --route-supply-soft: #fff0cd;
+}
+#frontRoutes[data-choosing] [data-route='bridge'] {
+    border-color: var(--route-bridge);
+}
+#frontRoutes[data-choosing] [data-route='supply'] {
+    border-color: var(--route-supply);
+}
+#frontRoutes [data-route='bridge'][aria-pressed='true'] {
+    color: #fff;
+    background: var(--route-bridge);
+    border-color: var(--route-bridge);
+}
+#frontRoutes [data-route='supply'][aria-pressed='true'] {
+    color: #fff9e9;
+    background: var(--route-supply);
+    border-color: var(--route-supply);
+}
+#frontRoutes [aria-pressed='true'] b::before {
+    content: '✓';
+    margin-right: 4px;
 }
 #frontRoutes button > span {
     min-width: 0;
