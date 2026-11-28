@@ -1157,11 +1157,8 @@ dialog label {
     background: #f7faf3;
     color: #294f42;
     touch-action: manipulation;
+    cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-}
-#frontRoutes button:disabled {
-    opacity: 1;
-    cursor: default;
 }
 #frontRoutes [data-route='supply'] {
     color: #724815;
@@ -1175,10 +1172,10 @@ dialog label {
     --route-supply: #7b511e;
     --route-supply-soft: #fff0cd;
 }
-#frontRoutes[data-choosing] [data-route='bridge'] {
+#frontRoutes [data-route='bridge'] {
     border-color: var(--route-bridge);
 }
-#frontRoutes[data-choosing] [data-route='supply'] {
+#frontRoutes [data-route='supply'] {
     border-color: var(--route-supply);
 }
 #frontRoutes [data-route='bridge'][aria-pressed='true'] {

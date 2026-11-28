@@ -279,17 +279,30 @@ def run(browser, name, width, height, touch):
     }""")
     shot("rotated")
 
-    # Calculate, change the selected route, then confirm without re-entering the formula.
+    # Select before writing the formula, then keep the route while replacing a partial draft.
     launch=page.locator('[data-action="produce"]')
+    assert launch.is_disabled()
+    produced="Numori.economy.sides[0].stats.produced"
+    before_choice=page.evaluate(produced)
+    press('[data-route="supply"]')
+    assert page.locator('[data-route="supply"]').get_attribute('aria-pressed') == 'true'
     assert launch.is_disabled()
     witness=page.evaluate("Numori.economy.summonHint(0,{})")
     assert witness
+    first_number=page.evaluate("""ast => {
+        while (ast.type === 'op') ast = ast.args[0];
+        return ast.key;
+    }""",witness)
+    token(first_number)
+    assert page.locator('[data-route="supply"]').get_attribute('aria-pressed') == 'true'
+    press('[data-action="clear"]')
+    assert page.locator('[data-route="supply"]').get_attribute('aria-pressed') == 'true'
+    assert launch.is_disabled()
     type_tree(press,witness)
     dispatch(24)
-    assert launch.get_attribute('data-destination') == 'bridge'
+    assert launch.get_attribute('data-destination') == 'supply'
     draft=page.evaluate("JSON.stringify(Numori.editor.ast())")
-    produced="Numori.economy.sides[0].stats.produced"
-    before_choice=page.evaluate(produced)
+    choose_route(page, press, 'bridge')
     choose_route(page, press, 'supply')
     assert before_choice==page.evaluate(produced)
     assert draft==page.evaluate("JSON.stringify(Numori.editor.ast())")

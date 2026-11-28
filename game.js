@@ -21,7 +21,7 @@
         () =>
             '정확히 맞혀 소환하면 다음 목표가 열려요. 일꾼이 본진에 가져온 숫자와 기호로 새 식을 만들어 보세요.',
         () =>
-            '수식을 완성하면 기본 전선인 중앙 다리로 출격할 준비가 돼요. 거인 전선으로 보내려면 그 카드를 누른 뒤 출격하세요.',
+            '기본 전선은 중앙 다리예요. 거인 전선으로 보내려면 수식을 만들기 전에도 그 카드를 눌러 먼저 고를 수 있어요.',
     ];
     let match,
         series,
@@ -42,6 +42,7 @@
     let hintGoal,
         receiptUntil = 0;
     let selectedRoute = 'bridge',
+        routePreselected = false,
         routePayable = false,
         dispatched = null;
     let meterEnabled = params.get('perf') === '1';
@@ -148,7 +149,7 @@
         openPanel(
             '조작법 · 연산자',
             '<p>숫자 → 연산자 → 숫자를 누른 뒤 등호로 소환하세요. ‘수식 보관’을 누르면 지금 식을 두고 새 식을 시작해요. 보관한 값을 누르면 다시 사용할 수 있어요. 손패의 1~9 숫자와 +, −, ×, ÷로 목표를 만들어 보세요. 목표에서 2 이내인 양의 정수만 출격해요. 차이가 2면 8마리, 1이면 16마리, 정확히 맞추면 24마리예요. 범위 밖의 수식은 재료를 바꿔 다시 시도하세요. 병종은 수식 결과로 정해져요.</p>' +
-                '<p>수식을 완성하면 기본 전선인 중앙 다리로 바로 출격할 수 있어요. 두 번째 부대부터는 거인 전선 카드를 눌러 이번 출격로를 바꿀 수 있어요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
+                '<p>기본 전선은 중앙 다리예요. 수식을 만들기 전이나 도중에도 전선 카드를 눌러 이번 출격로를 고를 수 있어요. 출격하면 다음 부대의 경로가 중앙 다리로 돌아와요. 제단에서 30초 동안 병력 우세를 유지하면 거인이 아군에 합류해요. 병력이 같으면 시간이 멈추고 우세한 진영이 바뀌면 새 진영이 다시 30초를 채워야 해요. 확보한 지 28초 뒤 다른 거인이 나타나요.</p><p>' +
                 giants +
                 '</p>' +
                 '<p>전선마다 방어 타워가 하나씩 있어요. 한 전선의 타워를 부수면 그 길로 적 본진까지 갈 수 있어요. 타워와 본진은 사거리 안의 적에게 0.2초마다 쏴요. 다섯 번째 탄은 곡사로 날아가 착탄 지점 주변의 적을 함께 때려요.</p>' +
@@ -410,6 +411,7 @@
         lastFrame = 0;
         lastSound = {};
         selectedRoute = 'bridge';
+        routePreselected = false;
         dispatched = null;
         routePayable = false;
         $('#titleScreen').hidden = true;
@@ -418,14 +420,10 @@
         world = NumoriWorld.mount($('#world'), { localSide });
         editor = NumoriEditor.mount($('#editor'), {
             inventory: () => economy.sides[localSide].inventory,
-            firstDispatch: () => economy.sides[localSide].stats.firstProduction === null,
             selectedRoute: () => selectedRoute,
             routeName: (route) => routeNames[route],
-            selectable(payable) {
-                if (routePayable === payable) return;
+            payable(payable) {
                 routePayable = payable;
-                if (!payable) selectedRoute = 'bridge';
-                showRoutes();
             },
             targetGoal: () => economy.sides[localSide].targets.summon,
             active,
@@ -443,15 +441,17 @@
             preview: (ast, res) => economy.preview(localSide, 'summon', ast, res),
             produce: (ast, res, route) => {
                 if (!active()) return { ok: false, reason: '경기를 재개하세요.' };
-                const opening = economy.sides[localSide].stats.firstProduction === null;
+                const autoFollowOpening =
+                    economy.sides[localSide].stats.firstProduction === null && !routePreselected;
                 const finish = (p) => {
                     if (p?.ok && match === instance) {
                         dispatched = { route: p.route, time: battle.time };
                         selectedRoute = 'bridge';
+                        routePreselected = false;
                         routePayable = false;
                         showRoutes();
                         audio.play(p.matched ? 'bonus' : 'spawn');
-                        if (opening) world.followFirstDeployment();
+                        if (autoFollowOpening) world.followFirstDeployment();
                         else world.followDeployment(p.route);
                         showLaunchReceipt(p);
                         closeHint();
@@ -588,31 +588,29 @@
     }
     function currentRouteCue() {
         if (!battle) return null;
-        if (routePayable) return { route: selectedRoute, state: 'selected' };
+        if (routePreselected || routePayable) return { route: selectedRoute, state: 'selected' };
         if (dispatched && battle.time - dispatched.time < 5.4)
             return { route: dispatched.route, state: 'dispatched' };
         return null;
     }
-    function viewRoute(route, keyboard) {
+    function selectRoute(route, keyboard) {
         if (
             !active() ||
             !['bridge', 'supply'].includes(route) ||
             $('#editor').hasAttribute('aria-busy')
         )
             return;
-        if (routePayable) {
-            selectedRoute = route;
-            const receipt = $('#launchReceipt');
-            if (!receipt.hidden && receipt.dataset.kind !== 'capture') {
-                receipt.hidden = true;
-                receiptUntil = 0;
-            }
-            world.route(route);
-            showRoutes();
-            editor.refresh();
-            if (keyboard) $('[data-action="produce"]').focus();
-        } else if (route === 'supply') world.supply();
-        else world.battle();
+        selectedRoute = route;
+        routePreselected = true;
+        const receipt = $('#launchReceipt');
+        if (!receipt.hidden && receipt.dataset.kind !== 'capture') {
+            receipt.hidden = true;
+            receiptUntil = 0;
+        }
+        world.route(route);
+        showRoutes();
+        editor.refresh();
+        if (keyboard) (routePayable ? $('[data-action="produce"]') : $('#editor')).focus();
     }
     function routeDefense(route) {
         const own = battle.towers[localSide][route];
@@ -625,15 +623,10 @@
         const station = battle.station;
         const bridge = $('[data-route="bridge"]');
         const supply = $('[data-route="supply"]');
-        const first = economy.sides[localSide].stats.firstProduction === null;
-        supply.disabled = first;
         bridge.setAttribute('aria-pressed', String(selectedRoute === 'bridge'));
         supply.setAttribute('aria-pressed', String(selectedRoute === 'supply'));
-        $('#frontRoutes').toggleAttribute('data-choosing', routePayable);
-        $('#bridgeOrder').textContent = first ? '첫 부대 출격' : '기본 전선';
-        const action = routePayable ? ' 선택 · ' : ' 보기 · ';
-        bridge.title = routeNames.bridge + action + routeDefense('bridge');
-        supply.title = routeNames.supply + action + routeDefense('supply');
+        bridge.title = routeNames.bridge + ' 선택 · ' + routeDefense('bridge');
+        supply.title = routeNames.supply + ' 선택 · ' + routeDefense('supply');
         showGiantStatus(station);
     }
     function showGiantStatus(station) {
@@ -737,7 +730,7 @@
         if (!b) return;
         audio.unlock();
         if (b.dataset.route) {
-            viewRoute(b.dataset.route, e.detail === 0);
+            selectRoute(b.dataset.route, e.detail === 0);
             return;
         }
         if (b.dataset.level) {

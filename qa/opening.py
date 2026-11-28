@@ -12,6 +12,7 @@ from playwright.sync_api import sync_playwright
 
 
 VIEWS = {"portrait": (390, 844), "landscape": (844, 390), "desktop": (1440, 900)}
+OPENING_VIEWS = {**VIEWS, "short": (568, 320)}
 
 # GameKit binds the frame source when the match starts. A fixed clock makes the
 # input tick and camera easing reproducible while the actual game loop renders.
@@ -64,7 +65,7 @@ VISIBILITY = """() => {
 
 
 def replay(browser, source, view, args):
-    width, height = VIEWS[view]
+    width, height = OPENING_VIEWS[view]
     touch = view != "desktop"
     context = browser.new_context(viewport={"width":width, "height":height},
         is_mobile=touch, has_touch=touch, device_scale_factor=1)
@@ -94,11 +95,31 @@ def replay(browser, source, view, args):
 
     dispatch_tick = args.dispatch_tick
     assert run_to(dispatch_tick) == dispatch_tick
+    if args.route == "supply":
+        supply = page.locator('[data-route="supply"]')
+        assert supply.is_enabled()
+        assert page.locator('[data-route="bridge"]').get_attribute("aria-pressed") == "true"
+        assert page.locator('[data-action="produce"]').is_disabled()
+        press('[data-route="supply"]')
+        assert supply.get_attribute("aria-pressed") == "true"
+        assert page.evaluate("Numori.routeCue") == {"route": "supply", "state": "selected"}
+        assert page.evaluate("Numori.economy.sides[0].stats.produced") == 0
+        page.evaluate("()=>{ const {world,battle,economy,routeCue}=Numori; world.render({battle,economy,routeCue},0); }")
+        page.screenshot(path=args.out / f"{view}-before-formula.png", timeout=20000)
     for selector in ('[data-number="8"]', '[data-op="mul"]', '[data-number="4"]'):
         press(selector)
     assert page.locator(".ne-unit-count").inner_text().strip().startswith("24")
+    if args.route == "supply":
+        launch = page.locator('[data-action="produce"]')
+        assert launch.get_attribute("data-destination") == "supply"
+        assert "거인 전선" in launch.inner_text()
+        page.screenshot(path=args.out / f"{view}-before-launch.png", timeout=20000)
     press('[data-action="produce"]')
     assert page.evaluate("Numori.economy.sides[0].stats.produced") == 24
+    if args.route == "supply":
+        assert page.evaluate("Numori.economy.sides[0].stats.byRoute.supply") == 24
+        assert page.locator('[data-route="bridge"]').get_attribute("aria-pressed") == "true"
+        assert page.locator('#launchReceipt').get_attribute("data-kind") == "supply"
     assert not page.evaluate("!!window.firstUnitHit")
     page.evaluate("openingFrame()")
 
@@ -120,7 +141,7 @@ def replay(browser, source, view, args):
     assert hit.get("hit"), "No opposing troop lost HP in 60 seconds"
     hit_record = hit["hit"]
     delay = (hit_record["tick"] - dispatch_tick) / 30
-    row = {"view":view,"seed":args.seed,"dispatchTick":dispatch_tick,"secondsToDamage":round(delay,3),
+    row = {"view":view,"route":args.route,"seed":args.seed,"dispatchTick":dispatch_tick,"secondsToDamage":round(delay,3),
         "launch":launch,"afterFourSeconds":four,"firstContact":hit, "errors":errors}
     print(view, round(delay, 3), "s; visible source/target",
         hit_record["sourceScreen"]["visible"], hit_record["targetScreen"]["visible"], flush=True)
@@ -133,7 +154,8 @@ def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("source", help="Packed game HTML file or public URL")
     cli.add_argument("--out", required=True, type=Path)
-    cli.add_argument("--views", choices=VIEWS, nargs="+", default=list(VIEWS))
+    cli.add_argument("--views", choices=OPENING_VIEWS, nargs="+", default=list(VIEWS))
+    cli.add_argument("--route", choices=("bridge", "supply"), default="bridge")
     cli.add_argument("--seed", type=int, default=123)
     cli.add_argument("--dispatch-tick", type=int, default=120)
     cli.add_argument("--max-wait", type=float, help="Require both participants on screen and damage within this many seconds")

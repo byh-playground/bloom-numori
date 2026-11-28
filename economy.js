@@ -67,10 +67,11 @@
             spent: {},
             gathered: {},
             deliveries: 0,
-            byRoute: {bridge: 0, supply: 0},
+            byRoute: { bridge: 0, supply: 0 },
             lastDelivery: null,
             lastSupply: {},
             firstProduction: null,
+            firstRoute: null,
         };
     }
     function increment(bag, key, n = 1) {
@@ -159,7 +160,11 @@
         if (!range || result.value < range.min || result.value > range.max) return plan;
         const difference = Math.abs(result.value - goal);
         plan.matched = difference === 0;
-        const multiplier = plan.matched ? config.troopMultiplier : difference === 1 ? config.nearMultiplier : 1;
+        const multiplier = plan.matched
+            ? config.troopMultiplier
+            : difference === 1
+              ? config.nearMultiplier
+              : 1;
         plan.raw = config.baseBatch * multiplier;
         return plan;
     }
@@ -224,14 +229,21 @@
         for (let depth = 1; depth <= 2; depth++) {
             const next = [],
                 orders = depth === 1 ? 1 : 2;
-            for (let index of sampleIndices(previous.length * leaves.length * ops.length * orders, budget, rng)) {
+            for (let index of sampleIndices(
+                previous.length * leaves.length * ops.length * orders,
+                budget,
+                rng,
+            )) {
                 const swap = index % orders;
                 index = Math.floor(index / orders);
                 const op = ops[index % ops.length];
                 index = Math.floor(index / ops.length);
                 const leaf = leaves[index % leaves.length],
                     branch = previous[Math.floor(index / leaves.length)];
-                if (stock[leaf.key] < 1 + (branch.r.cost[leaf.key] || 0) || stock[op] < 1 + (branch.r.cost[op] || 0))
+                if (
+                    stock[leaf.key] < 1 + (branch.r.cost[leaf.key] || 0) ||
+                    stock[op] < 1 + (branch.r.cost[op] || 0)
+                )
                     continue;
                 const ast = swap ? M.op(op, leaf.ast, branch.ast) : M.op(op, branch.ast, leaf.ast);
                 const r = M.evaluate(ast);
@@ -255,7 +267,8 @@
         }) {
             const allowedWeights = (overrides, defaults) => {
                 const entries = Object.entries(overrides ?? {}).filter(
-                    ([key, value]) => Object.hasOwn(defaults, key) && Number.isFinite(value) && value > 0,
+                    ([key, value]) =>
+                        Object.hasOwn(defaults, key) && Number.isFinite(value) && value > 0,
                 );
                 return entries.length ? Object.fromEntries(entries) : defaults;
             };
@@ -294,7 +307,10 @@
             });
             this.supplyRandom = this.bases.map(() =>
                 Object.fromEntries(
-                    MINE_KEYS.map((name, i) => [name, seeded((seed >>> 0) ^ Math.imul(i + 1, 0x9e3779b9))]),
+                    MINE_KEYS.map((name, i) => [
+                        name,
+                        seeded((seed >>> 0) ^ Math.imul(i + 1, 0x9e3779b9)),
+                    ]),
                 ),
             );
             this.sides = this.bases.map(() => ({
@@ -321,11 +337,13 @@
             return MINE_KEYS.includes(mine);
         }
         assign(side, mine, delta) {
-            if (this.battle.winner !== -1 || !MINE_KEYS.includes(mine) || ![1, -1].includes(delta)) return false;
+            if (this.battle.winner !== -1 || !MINE_KEYS.includes(mine) || ![1, -1].includes(delta))
+                return false;
             const workers = this.sides[side].workers;
             if (
                 delta > 0 &&
-                (!this.accessible(side, mine) || this.allocation(side)[mine] >= this.config.mineSlots[mine])
+                (!this.accessible(side, mine) ||
+                    this.allocation(side)[mine] >= this.config.mineSlots[mine])
             )
                 return false;
             const worker = workers.find((w) => w.assigned === (delta > 0 ? null : mine));
@@ -407,10 +425,17 @@
                         increment(s.stats.gathered, token);
                     }
                     s.stats.deliveries++;
-                    const event = { token: w.cargo, time: this.time, mine: w.trip, worker: w.id, count: w.cargoCount };
+                    const event = {
+                        token: w.cargo,
+                        time: this.time,
+                        mine: w.trip,
+                        worker: w.id,
+                        count: w.cargoCount,
+                    };
                     s.stats.lastDelivery = event;
                     s.stats.lastSupply[w.trip] = event;
-                    if (s.targets.summon === null) this.refreshTarget(w.team, this.reservations(w.team));
+                    if (s.targets.summon === null)
+                        this.refreshTarget(w.team, this.reservations(w.team));
                 }
                 w.cargo = null;
                 w.cargoCount = 0;
@@ -421,8 +446,7 @@
             }
         }
         refreshTarget(side, reserved = {}) {
-            const s = this.sides[side],
-                M = globalThis.MathCore;
+            const s = this.sides[side];
             const stock = availableInventory(s.inventory, reserved);
             const previous = s.targets.summon;
             let best = null,
@@ -436,7 +460,10 @@
                 const value = r.value;
                 const held = stock[String(value)] > 0 || depth === 0;
                 const score =
-                    (value !== previous ? 64 : 0) + (depth > 0 ? 8 : 0) + (!held ? 4 : 0) + (value >= 10 ? 2 : 0);
+                    (value !== previous ? 64 : 0) +
+                    (depth > 0 ? 8 : 0) +
+                    (!held ? 4 : 0) +
+                    (value >= 10 ? 2 : 0);
                 if (score > rank) {
                     best = option;
                     rank = score;
@@ -454,7 +481,10 @@
             const math = globalThis.MathCore;
             const stock = availableInventory(inventory, reserved);
             const witness = summonWitness && math.evaluate(summonWitness);
-            if (math.matches(witness, goal) && Object.entries(witness.cost).every(([key, n]) => stock[key] >= n))
+            if (
+                math.matches(witness, goal) &&
+                Object.entries(witness.cost).every(([key, n]) => stock[key] >= n)
+            )
                 return summonWitness;
 
             // At most three digit blocks and two operators. A fixed traversal keeps hints off the match RNG.
@@ -483,7 +513,8 @@
                 cost: result.cost || {},
             };
             const fail = (reason) => ({ ...preview, reason });
-            if (this.battle.winner === 0 || this.battle.winner === 1) return fail('종료된 전투입니다.');
+            if (this.battle.winner === 0 || this.battle.winner === 1)
+                return fail('종료된 전투입니다.');
             if (!reserved || Object.values(reserved).some((n) => !Number.isSafeInteger(n) || n < 0))
                 return fail('자원 예약을 확인하세요.');
             if (!result.ok) return fail(result.error || '수식을 완성하세요.');
@@ -493,7 +524,8 @@
             const range = summonRange(target);
             Object.assign(preview, troopPlan(result, classification, target, range, this.config));
             if (!range) return fail('채집 후 소환 목표가 정해져요.');
-            if (!preview.raw) return fail(`소환하려면 ${range.min}~${range.max} 사이의 정수를 만드세요.`);
+            if (!preview.raw)
+                return fail(`소환하려면 ${range.min}~${range.max} 사이의 정수를 만드세요.`);
             preview.actual = Math.min(Math.max(0, room), preview.raw);
             preview.waste = preview.raw - preview.actual;
             if (room <= 0) return fail('병력 상한 1,000마리에 도달했어요.');
@@ -508,7 +540,8 @@
         produce(side, type, ast, reserved = {}, route = 'bridge') {
             const p = this.preview(side, type, ast, reserved);
             if (!p.ok) return p;
-            if (!Object.hasOwn(Battle.routes, route)) return {...p, ok: false, reason: '출격 경로를 확인하세요.'};
+            if (!Object.hasOwn(Battle.routes, route))
+                return { ...p, ok: false, reason: '출격 경로를 확인하세요.' };
             const s = this.sides[side],
                 stats = s.stats;
             for (const [key, n] of Object.entries({ ...p.cost, '=': 1 })) {
@@ -517,13 +550,18 @@
                 if (globalThis.MathCore.ops[key]) increment(stats.operators, key, n);
             }
             const opening = stats.firstProduction === null;
-            p.route = opening ? 'bridge' : route;
+            p.route = route;
             this.battle.spawn(side, p.unitType, p.actual, p.matched, {
-                opening, route: p.route,
-                equation: side === 0 && p.matched ? globalThis.MathCore.format(ast) + ' = ' + p.target : null,
+                opening,
+                route: p.route,
+                equation:
+                    side === 0 && p.matched
+                        ? globalThis.MathCore.format(ast) + ' = ' + p.target
+                        : null,
             });
             if (opening && side === 0 && this.computerOpponent) this.nextDecision = this.time;
             stats.firstProduction ??= this.time;
+            stats.firstRoute ??= route;
             stats.produced += p.actual;
             stats.byRoute[p.route] += p.actual;
             stats.byType[p.unitType] += p.actual;
@@ -555,12 +593,21 @@
         chooseRoute(side) {
             const station = this.battle.station;
             const stats = this.sides[side].stats;
-            if (stats.firstProduction === null || this.battle.threat[side] ||
-                station.nextSpawn !== null && station.nextSpawn - this.time > 20)
+            if (stats.firstProduction === null)
+                return this.sides[1 - side].stats.firstRoute ?? 'bridge';
+            if (
+                this.battle.threat[side] ||
+                (station.nextSpawn !== null && station.nextSpawn - this.time > 20)
+            )
                 return 'bridge';
             // Keep the main approach staffed while a column heads towards the neutral giant.
-            const onTheWay = this.battle.units.some(u => u.side === side && u.route === 'supply' && !u.giantKind &&
-                (side === 0 ? u.waypoint <= 3 : u.waypoint >= 3));
+            const onTheWay = this.battle.units.some(
+                (u) =>
+                    u.side === side &&
+                    u.route === 'supply' &&
+                    !u.giantKind &&
+                    (side === 0 ? u.waypoint <= 3 : u.waypoint >= 3),
+            );
             if (onTheWay || stats.byRoute.supply >= stats.byRoute.bridge * 0.65) return 'bridge';
             return 'supply';
         }
@@ -579,7 +626,8 @@
             const countersEnabled = this.difficulty === 'hard';
             const weights = Object.fromEntries(
                 TYPES.map((type) => {
-                    const balance = 1 / (1 + (friendly[type] || 0) / Math.max(2, army / TYPES.length));
+                    const balance =
+                        1 / (1 + (friendly[type] || 0) / Math.max(2, army / TYPES.length));
                     const enemyCount = Battle.roles[type].strongAgainst.reduce(
                         (sum, counter) => sum + (enemy[counter] || 0),
                         0,
@@ -589,7 +637,9 @@
                         1 +
                             balance * 0.4 +
                             this.rng() * 0.15 +
-                            (countersEnabled ? (enemyCount / Math.max(1, this.battle.count(1 - side))) * 0.6 : 0),
+                            (countersEnabled
+                                ? (enemyCount / Math.max(1, this.battle.count(1 - side))) * 0.6
+                                : 0),
                     ];
                 }),
             );
@@ -604,13 +654,20 @@
                 const plan = troopPlan(r, classification, goal, range, this.config);
                 const actual = Math.min(room, plan.raw);
                 const points =
-                    weights[classification.unitType] * actual - (plan.raw - actual) * 0.25 + (plan.matched ? 5 : 0);
+                    weights[classification.unitType] * actual -
+                    (plan.raw - actual) * 0.25 +
+                    (plan.matched ? 5 : 0);
                 const net = points - cost * 0.9;
                 if (!best || net > best.points) best = { type: 'summon', ast, points: net };
             };
-            for (const c of [...basicCandidates(s.inventory, this.rng, ai.budget)]) score(c.ast, c.r);
+            for (const c of [...basicCandidates(s.inventory, this.rng, ai.budget)])
+                score(c.ast, c.r);
             for (let i = 0; i < ai.budget; i++) {
-                const tree = sampleTree(s.inventory, 1 + Math.floor(this.rng() * ai.depth), this.rng);
+                const tree = sampleTree(
+                    s.inventory,
+                    1 + Math.floor(this.rng() * ai.depth),
+                    this.rng,
+                );
                 if (tree) score(tree, M.evaluate(tree));
             }
             return best;
@@ -618,7 +675,8 @@
         tick(dt) {
             if (!(dt > 0) || !Number.isFinite(dt) || this.battle.winner !== -1) return;
             this.time += dt;
-            for (const side of this.sides) for (const worker of side.workers) this.updateWorker(worker, dt);
+            for (const side of this.sides)
+                for (const worker of side.workers) this.updateWorker(worker, dt);
             if (this.computerOpponent && this.time >= this.nextDecision) {
                 this.nextDecision += this.ai.interval;
                 const cpu = this.sides[1];
