@@ -8,7 +8,7 @@ from pathlib import Path
 
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError, async_playwright, expect
 
-from multiplayer import game_url, initialize, press, pump, put_ast, serve, wait_ready
+from multiplayer import choose_route, game_url, initialize, press, pump, put_ast, serve, wait_ready
 
 
 def ast(tree):
@@ -65,12 +65,13 @@ async def order(page, side, route, tree, value):
     await expect(page.locator('.ne-goal')).to_have_text(str(value))
     before = await page.evaluate('s=>Numori.economy.sides[s].stats.produced', side)
     if before:
-        await expect(page.locator('[data-dispatch-route="supply"]')).to_be_hidden()
+        await expect(page.locator('[data-action="produce"]')).to_be_disabled()
     await put_ast(page, ast(tree), True, [])
     await expect(page.locator('.ne-dispatch-count')).to_have_text('24마리')
+    if before:
+        await choose_route(page, route, True)
     assert await page.evaluate('s=>Numori.economy.sides[s].stats.produced', side) == before
-    selector = '[data-action="produce"]' if not before else f'[data-dispatch-route="{route}"]'
-    await press(page, selector, True)
+    await press(page, '[data-action="produce"]', True)
     await page.wait_for_function(
         '([side,before])=>Numori.economy.sides[side].stats.produced===before+24',
         arg=[side, before], polling=50,
@@ -82,10 +83,10 @@ async def capture(pages, folder, key, state, leader):
     station, tick = None, None
     for role, page in zip(('host', 'guest'), pages):
         await page.evaluate("""() => {
-            const {world,battle,economy}=Numori;
-            world.render({battle,economy},0);
+            const {world,battle,economy,routeCue}=Numori;
+            world.render({battle,economy,routeCue},0);
             world.supply();
-            world.render({battle,economy},0);
+            world.render({battle,economy,routeCue},0);
         }""")
         read = await page.evaluate(READ)
         if station is None:

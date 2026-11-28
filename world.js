@@ -4,12 +4,26 @@
         H = 1800;
     const projection = new OrthographicProjection({ degrees: 48 });
     const K = projection.K;
-    const ink = '#414333',
-        pale = '#fff1b9';
+    const ink = '#414333';
     const teams = [
         { deep: '#154d50', mid: '#267d77', light: '#82c7a1', flag: '#59e2ca', glow: '#c2ffeb' },
         { deep: '#833e45', mid: '#bc5e58', light: '#eea080', flag: '#ffad83', glow: '#ffe8c1' },
     ];
+    const routeColors = {
+        bridge: ['#16554c', '#84fff0'],
+        supply: ['#713814', '#ffd16b'],
+    };
+    const routeTints = Object.fromEntries(
+        Object.entries(routeColors).map(([route, colors]) => [
+            route,
+            colors.map((color) => [
+                Number.parseInt(color.slice(1, 3), 16) / 255,
+                Number.parseInt(color.slice(3, 5), 16) / 255,
+                Number.parseInt(color.slice(5, 7), 16) / 255,
+                1,
+            ]),
+        ]),
+    );
     const classes = ['archer', 'shield', 'charger', 'spear', 'thrower'];
     function surface(w, h) {
         const c = document.createElement('canvas');
@@ -61,7 +75,17 @@
         const left = x - s.ox * scale,
             top = y - s.oy * scale;
         if (s.source)
-            c.drawImage(s.img, s.source.x, s.source.y, s.source.w, s.source.h, left, top, s.w * scale, s.h * scale);
+            c.drawImage(
+                s.img,
+                s.source.x,
+                s.source.y,
+                s.source.w,
+                s.source.h,
+                left,
+                top,
+                s.w * scale,
+                s.h * scale,
+            );
         else c.drawImage(s.img, left, top, s.w * scale, s.h * scale);
     }
     // Props and landmarks share the same illustrated atlas. The anchor is the point on
@@ -119,29 +143,48 @@
     function baseArt(team) {
         return prop(team, 183, 178, 0.89);
     }
-    const turretArt = () => teams.map((team) =>
-        bake(116, 111, 58, 95, (g) => {
-            oval(g,0,1,53,12,'#47564142');
-            path(g,'M-47 -10l12 -12h68l15 10-4 16-79 3Z','#a39970',ink,2.8);
-            path(g,'M-47 -10h89l-5 12-72 5Z','#c5b58a',ink,2.4);
-            path(g,'M-34 -17l7 -40h51l8 40-14 10h-39Z','#e9d5a6',ink,3.1);
-            path(g,'M14 -56h10l8 39-14 10-5 -5Z','#c5a876',ink,2);
-            path(g,'M-31 -34h16m-15 10h5m14 -19h5m19 19h10',null,'#cead7b',2);
-            path(g,'M-40 -50l3 -24 13 2 3 9h8l1 -12h15l2 11h8l2 -10h15l7 21-10 10-48 1Z',team.mid,team.deep,3.1);
-            path(g,'M-37 -74l13 2 3 9h8l1 -12h15l2 11h8l2 -10h15l5 13-9 6-51 1-12 -6Z',team.light,team.deep,2);
-            path(g,'M-11 -41h22l3 17-14 11-14 -11Z',team.deep,ink,1.8);
-            path(g,'M-8 -39H9l2 14L0 -17l-11 -8Z',team.flag);
-            path(g,'M-5 -30l5 -6 5 6-5 6Z',team.deep);
-            path(g,'M-22 -58v-29',null,team.deep,2.5);
-            path(g,'M-22 -88q10 -5 26 2l-7 4 7 5q-16 -3-26 1Z',team.flag,team.deep,1.45);
-        })
-    );
+    const turretArt = () =>
+        teams.map((team) =>
+            bake(116, 111, 58, 95, (g) => {
+                oval(g, 0, 1, 53, 12, '#47564142');
+                path(g, 'M-47 -10l12 -12h68l15 10-4 16-79 3Z', '#a39970', ink, 2.8);
+                path(g, 'M-47 -10h89l-5 12-72 5Z', '#c5b58a', ink, 2.4);
+                path(g, 'M-34 -17l7 -40h51l8 40-14 10h-39Z', '#e9d5a6', ink, 3.1);
+                path(g, 'M14 -56h10l8 39-14 10-5 -5Z', '#c5a876', ink, 2);
+                path(g, 'M-31 -34h16m-15 10h5m14 -19h5m19 19h10', null, '#cead7b', 2);
+                path(
+                    g,
+                    'M-40 -50l3 -24 13 2 3 9h8l1 -12h15l2 11h8l2 -10h15l7 21-10 10-48 1Z',
+                    team.mid,
+                    team.deep,
+                    3.1,
+                );
+                path(
+                    g,
+                    'M-37 -74l13 2 3 9h8l1 -12h15l2 11h8l2 -10h15l5 13-9 6-51 1-12 -6Z',
+                    team.light,
+                    team.deep,
+                    2,
+                );
+                path(g, 'M-11 -41h22l3 17-14 11-14 -11Z', team.deep, ink, 1.8);
+                path(g, 'M-8 -39H9l2 14L0 -17l-11 -8Z', team.flag);
+                path(g, 'M-5 -30l5 -6 5 6-5 6Z', team.deep);
+                path(g, 'M-22 -58v-29', null, team.deep, 2.5);
+                path(g, 'M-22 -88q10 -5 26 2l-7 4 7 5q-16 -3-26 1Z', team.flag, team.deep, 1.45);
+            }),
+        );
     function towerRubble() {
         return bake(116, 58, 58, 43, (g) => {
-            oval(g,0,0,53,12,'#4756413a');
-            path(g,'M-47 -10l12 -12h68l15 10-4 16-79 3Z','#bca783',ink,2.2);
-            path(g,'M-32 -12-29 -22-13 -29 1 -19-4 -10-17 -6Zm24 7 12 -13 13 1 3 10-13 5Zm28 -10 6 -14 13 6 3 11-8 4Z','#d2b791','#79694e',2.3);
-            path(g,'M-33 -3l13 -3m25 -8 9 3m14 -12 5 4m-44 18 8 3',null,'#aa9066',2.1);
+            oval(g, 0, 0, 53, 12, '#4756413a');
+            path(g, 'M-47 -10l12 -12h68l15 10-4 16-79 3Z', '#bca783', ink, 2.2);
+            path(
+                g,
+                'M-32 -12-29 -22-13 -29 1 -19-4 -10-17 -6Zm24 7 12 -13 13 1 3 10-13 5Zm28 -10 6 -14 13 6 3 11-8 4Z',
+                '#d2b791',
+                '#79694e',
+                2.3,
+            );
+            path(g, 'M-33 -3l13 -3m25 -8 9 3m14 -12 5 4m-44 18 8 3', null, '#aa9066', 2.1);
         });
     }
     function mineArt(gas) {
@@ -154,59 +197,158 @@
     let giantArt;
     function giantSprites() {
         if (giantArt) return giantArt;
-        giantArt = Object.fromEntries(['bulwark', 'breaker', 'lobber'].map((kind) => [
-            kind, giantColors.map((team) => bake(188, 155, 91, 145, (c) => {
-                const edge = '#473d36';
-                // Rounded stone plates and wide-set feet echo the little geometric troops.
-                path(c, 'M-42 -17 -33 -27 -13 -25 -7 -11 -13 1 -48 1 -51 -6Z M9 -16 21 -28 44 -23 53 -9 49 2H15Z',
-                    '#827369', edge, 4);
-                path(c, 'M-44 -10Q-30 -17 -13 -11 M15 -8Q31 -16 46 -10', null, '#b5a58e', 3);
-                path(c, 'M-51 -81Q-42 -102 0 -104Q34 -104 52 -84L57 -46Q51 -18 27 -14L-23 -15Q-53 -21 -58 -48Z',
-                    team.mid, edge, 4.5);
-                path(c, 'M-50 -79Q-24 -108 10 -93Q-14 -62 -47 -62Z', team.light);
-                path(c, 'M-34 -67Q-10 -70 18 -63L26 -33Q2 -23 -27 -33Z', '#ceb895', edge, 3.3);
-                path(c, 'M-34 -37L-16 -33 -7 -43 8 -37 25 -38', null, '#b3997d', 2.3);
-                oval(c, -40, -58, 13, 16, team.deep, edge, 3);
-                oval(c, -43, -63, 5, 7, team.flag);
-                if (kind === 'bulwark') {
-                    path(c, 'M-35 -91V-113L-24 -133 -3 -128 18 -134 31 -116 27 -89Z',
-                        team.light, edge, 4);
-                    path(c, 'M-24 -131 -6 -142 12 -132 11 -119 -8 -123 -20 -118Z', team.mid, edge, 3);
-                    path(c, 'M-18 -110H19L21 -99 -15 -97Z', '#433d42', edge, 2);
-                    oval(c, -7, -104, 3, 3.6, team.glow);
-                    oval(c, 11, -104, 3, 3.6, team.glow);
-                    path(c, 'M9 -78 61 -88 78 -73 72 -28 51 -9 21 -23 8 -40Z', team.deep, edge, 4.6);
-                    path(c, 'M18 -71 60 -78 69 -69 63 -33 50 -18 29 -30 17 -43Z', team.light, team.deep, 2.6);
-                    path(c, 'M43 -63 55 -64 55 -54 63 -55 61 -44 54 -44 51 -33 40 -34 43 -44 32 -43 34 -54 43 -54Z',
-                        team.flag, team.deep, 2);
-                } else if (kind === 'breaker') {
-                    path(c, 'M-41 -103 -33 -121 -22 -113 -12 -120 19 -114 32 -96 19 -80 -31 -83Z',
-                        team.light, edge, 4);
-                    path(c, 'M-28 -100 7 -104 19 -100 18 -89 -25 -90Z', '#423b3b', edge, 2);
-                    oval(c, -12, -96, 3.7, 4, team.glow);
-                    oval(c, 9, -97, 3.7, 4, team.glow);
-                    path(c, 'M-42 -51 46 -53 59 -38 43 -21 -38 -28Z', '#b88961', edge, 4);
-                    path(c, 'M-43 -49 18 -46 36 -56 M-28 -44 9 -40', null, '#e8bf8a', 3.7);
-                    path(c, 'M38 -57 64 -62 85 -53 90 -40 78 -23 50 -19 40 -29 49 -38 41 -43Z',
-                        team.deep, edge, 4);
-                    path(c, 'M59 -54 73 -57 84 -51 87 -41 77 -35 62 -33 54 -42Z', team.light, team.deep, 3);
-                    path(c, 'M60 -50 74 -52 80 -48 M59 -29 74 -29', null, team.flag, 3);
-                    oval(c, -16, -33, 12, 12, team.mid, edge, 3.8);
-                } else {
-                    path(c, 'M-32 -88 -35 -105 -24 -122 12 -124 32 -108 25 -89Z', team.light, edge, 4);
-                    path(c, 'M-22 -104 18 -110 24 -99 -20 -93Z', '#413e40', edge, 2);
-                    oval(c, -9, -101, 4, 4, team.glow);
-                    oval(c, 11, -104, 4, 4, team.glow);
-                    path(c, 'M11 -65 51 -108 59 -102 35 -64 49 -16 40 -11 19 -50Z', '#a47956', edge, 4);
-                    path(c, 'M20 -58 48 -73 78 -111 84 -107 64 -68 36 -44Z', '#d9a976', edge, 4);
-                    path(c, 'M37 -99 33 -117 46 -129 63 -129 77 -119 76 -105 64 -95Z', '#9f8a80', edge, 4);
-                    path(c, 'M41 -118 47 -123 60 -124 67 -120 57 -116 50 -106 40 -110Z', '#ebd4b1');
-                    path(c, 'M46 -91Q56 -84 70 -92L79 -104', null, team.deep, 6);
-                    path(c, 'M47 -91Q57 -85 70 -92L79 -104', null, team.flag, 2.7);
-                    oval(c, 20, -52, 12, 12, team.mid, edge, 3.8);
-                }
-            })),
-        ]));
+        giantArt = Object.fromEntries(
+            ['bulwark', 'breaker', 'lobber'].map((kind) => [
+                kind,
+                giantColors.map((team) =>
+                    bake(188, 155, 91, 145, (c) => {
+                        const edge = '#473d36';
+                        // Rounded stone plates and wide-set feet echo the little geometric troops.
+                        path(
+                            c,
+                            'M-42 -17 -33 -27 -13 -25 -7 -11 -13 1 -48 1 -51 -6Z M9 -16 21 -28 44 -23 53 -9 49 2H15Z',
+                            '#827369',
+                            edge,
+                            4,
+                        );
+                        path(
+                            c,
+                            'M-44 -10Q-30 -17 -13 -11 M15 -8Q31 -16 46 -10',
+                            null,
+                            '#b5a58e',
+                            3,
+                        );
+                        path(
+                            c,
+                            'M-51 -81Q-42 -102 0 -104Q34 -104 52 -84L57 -46Q51 -18 27 -14L-23 -15Q-53 -21 -58 -48Z',
+                            team.mid,
+                            edge,
+                            4.5,
+                        );
+                        path(c, 'M-50 -79Q-24 -108 10 -93Q-14 -62 -47 -62Z', team.light);
+                        path(
+                            c,
+                            'M-34 -67Q-10 -70 18 -63L26 -33Q2 -23 -27 -33Z',
+                            '#ceb895',
+                            edge,
+                            3.3,
+                        );
+                        path(c, 'M-34 -37L-16 -33 -7 -43 8 -37 25 -38', null, '#b3997d', 2.3);
+                        oval(c, -40, -58, 13, 16, team.deep, edge, 3);
+                        oval(c, -43, -63, 5, 7, team.flag);
+                        if (kind === 'bulwark') {
+                            path(
+                                c,
+                                'M-35 -91V-113L-24 -133 -3 -128 18 -134 31 -116 27 -89Z',
+                                team.light,
+                                edge,
+                                4,
+                            );
+                            path(
+                                c,
+                                'M-24 -131 -6 -142 12 -132 11 -119 -8 -123 -20 -118Z',
+                                team.mid,
+                                edge,
+                                3,
+                            );
+                            path(c, 'M-18 -110H19L21 -99 -15 -97Z', '#433d42', edge, 2);
+                            oval(c, -7, -104, 3, 3.6, team.glow);
+                            oval(c, 11, -104, 3, 3.6, team.glow);
+                            path(
+                                c,
+                                'M9 -78 61 -88 78 -73 72 -28 51 -9 21 -23 8 -40Z',
+                                team.deep,
+                                edge,
+                                4.6,
+                            );
+                            path(
+                                c,
+                                'M18 -71 60 -78 69 -69 63 -33 50 -18 29 -30 17 -43Z',
+                                team.light,
+                                team.deep,
+                                2.6,
+                            );
+                            path(
+                                c,
+                                'M43 -63 55 -64 55 -54 63 -55 61 -44 54 -44 51 -33 40 -34 43 -44 32 -43 34 -54 43 -54Z',
+                                team.flag,
+                                team.deep,
+                                2,
+                            );
+                        } else if (kind === 'breaker') {
+                            path(
+                                c,
+                                'M-41 -103 -33 -121 -22 -113 -12 -120 19 -114 32 -96 19 -80 -31 -83Z',
+                                team.light,
+                                edge,
+                                4,
+                            );
+                            path(c, 'M-28 -100 7 -104 19 -100 18 -89 -25 -90Z', '#423b3b', edge, 2);
+                            oval(c, -12, -96, 3.7, 4, team.glow);
+                            oval(c, 9, -97, 3.7, 4, team.glow);
+                            path(c, 'M-42 -51 46 -53 59 -38 43 -21 -38 -28Z', '#b88961', edge, 4);
+                            path(c, 'M-43 -49 18 -46 36 -56 M-28 -44 9 -40', null, '#e8bf8a', 3.7);
+                            path(
+                                c,
+                                'M38 -57 64 -62 85 -53 90 -40 78 -23 50 -19 40 -29 49 -38 41 -43Z',
+                                team.deep,
+                                edge,
+                                4,
+                            );
+                            path(
+                                c,
+                                'M59 -54 73 -57 84 -51 87 -41 77 -35 62 -33 54 -42Z',
+                                team.light,
+                                team.deep,
+                                3,
+                            );
+                            path(c, 'M60 -50 74 -52 80 -48 M59 -29 74 -29', null, team.flag, 3);
+                            oval(c, -16, -33, 12, 12, team.mid, edge, 3.8);
+                        } else {
+                            path(
+                                c,
+                                'M-32 -88 -35 -105 -24 -122 12 -124 32 -108 25 -89Z',
+                                team.light,
+                                edge,
+                                4,
+                            );
+                            path(c, 'M-22 -104 18 -110 24 -99 -20 -93Z', '#413e40', edge, 2);
+                            oval(c, -9, -101, 4, 4, team.glow);
+                            oval(c, 11, -104, 4, 4, team.glow);
+                            path(
+                                c,
+                                'M11 -65 51 -108 59 -102 35 -64 49 -16 40 -11 19 -50Z',
+                                '#a47956',
+                                edge,
+                                4,
+                            );
+                            path(
+                                c,
+                                'M20 -58 48 -73 78 -111 84 -107 64 -68 36 -44Z',
+                                '#d9a976',
+                                edge,
+                                4,
+                            );
+                            path(
+                                c,
+                                'M37 -99 33 -117 46 -129 63 -129 77 -119 76 -105 64 -95Z',
+                                '#9f8a80',
+                                edge,
+                                4,
+                            );
+                            path(
+                                c,
+                                'M41 -118 47 -123 60 -124 67 -120 57 -116 50 -106 40 -110Z',
+                                '#ebd4b1',
+                            );
+                            path(c, 'M46 -91Q56 -84 70 -92L79 -104', null, team.deep, 6);
+                            path(c, 'M47 -91Q57 -85 70 -92L79 -104', null, team.flag, 2.7);
+                            oval(c, 20, -52, 12, 12, team.mid, edge, 3.8);
+                        }
+                    }),
+                ),
+            ]),
+        );
         return giantArt;
     }
     function meadow() {
@@ -242,64 +384,111 @@
         }
         // The two crossings belong to a single river. Keep their banks aligned
         // with the simulation's approach and rally points at each end.
-        const river = 'M1450 -60 C1700 210 1350 485 1480 735 Q1520 850 1500 900 C1460 1005 1428 1078 1475 1170 Q1505 1220 1500 1290 C1460 1450 1290 1680 1410 1860';
-        trail(river, [[175,'#98ae85'],[162,'#ead9a4'],[144,'#68a99d'],[133,'#87c9c0']]);
-        ctx.setLineDash([32,87,11,58]);
-        path(ctx,river,null,'#b3e2d7',4);
+        const river =
+            'M1450 -60 C1700 210 1350 485 1480 735 Q1520 850 1500 900 C1460 1005 1428 1078 1475 1170 Q1505 1220 1500 1290 C1460 1450 1290 1680 1410 1860';
+        trail(river, [
+            [175, '#98ae85'],
+            [162, '#ead9a4'],
+            [144, '#68a99d'],
+            [133, '#87c9c0'],
+        ]);
+        ctx.setLineDash([32, 87, 11, 58]);
+        path(ctx, river, null, '#b3e2d7', 4);
         ctx.setLineDash([]);
         const mainRoad = 'M-80 918 Q150 886 360 900 H2640 Q2860 886 3080 918';
-        const arenaRoad = 'M475 900 L925 1197 Q960 1220 999 1220 H2001 Q2040 1220 2075 1197 L2525 900';
-        trail(arenaRoad, [[102,'#a89767'],[96,'#cfa56f'],[86,'#e8bd83']]);
-        for (const offset of [-18,18]) {
+        const arenaRoad =
+            'M475 900 L925 1197 Q960 1220 999 1220 H2001 Q2040 1220 2075 1197 L2525 900';
+        trail(arenaRoad, [
+            [102, '#a89767'],
+            [96, '#cfa56f'],
+            [86, '#e8bd83'],
+        ]);
+        for (const offset of [-18, 18]) {
             ctx.save();
-            ctx.translate(0,offset);
-            ctx.setLineDash([31,16]);
-            path(ctx,arenaRoad,null,'#d5a76d',3);
+            ctx.translate(0, offset);
+            ctx.setLineDash([31, 16]);
+            path(ctx, arenaRoad, null, '#d5a76d', 3);
             ctx.setLineDash([]);
             ctx.restore();
         }
-        trail(mainRoad, [[150,'#a6b584'],[143,'#d3c698'],[133,'#f5e7bb']]);
+        trail(mainRoad, [
+            [150, '#a6b584'],
+            [143, '#d3c698'],
+            [133, '#f5e7bb'],
+        ]);
         // The upper bridge is rectangular. The lower crossing opens around the altar.
-        path(ctx,'M1384 827 Q1500 810 1616 827 V973 Q1500 991 1384 973 Z','#8c967e','#5e7569',4);
-        path(ctx,'M1384 821 Q1500 807 1616 821 V955 Q1500 972 1384 955Z','#eadfba','#9aa287',3);
-        for(let row=0;row<3;row++){
-            const y=837+row*43;
-            for(let x=1394+(row%2)*28;x<1608;x+=49)
-                path(ctx,`M${x} ${y}l-2 10m0 0h17`,null,'#d3c7a4',2.5);
+        path(
+            ctx,
+            'M1384 827 Q1500 810 1616 827 V973 Q1500 991 1384 973 Z',
+            '#8c967e',
+            '#5e7569',
+            4,
+        );
+        path(ctx, 'M1384 821 Q1500 807 1616 821 V955 Q1500 972 1384 955Z', '#eadfba', '#9aa287', 3);
+        for (let row = 0; row < 3; row++) {
+            const y = 837 + row * 43;
+            for (let x = 1394 + (row % 2) * 28; x < 1608; x += 49)
+                path(ctx, `M${x} ${y}l-2 10m0 0h17`, null, '#d3c7a4', 2.5);
         }
-        for (const y of [817,966]) {
-            path(ctx,`M1378 ${y}Q1500 ${y-11} 1622 ${y}`,null,'#768b74',7);
-            for (const x of [1382,1441,1559,1618]) {
-                path(ctx,`M${x-9} ${y+4}v-14l9 -5 9 5v14l-9 4Z`,'#dac99c','#75816a',3);
-                path(ctx,`M${x-9} ${y-10}l9 -5 9 5-9 5Z`,'#fff0c3','#87947a',1.6);
+        for (const y of [817, 966]) {
+            path(ctx, `M1378 ${y}Q1500 ${y - 11} 1622 ${y}`, null, '#768b74', 7);
+            for (const x of [1382, 1441, 1559, 1618]) {
+                path(ctx, `M${x - 9} ${y + 4}v-14l9 -5 9 5v14l-9 4Z`, '#dac99c', '#75816a', 3);
+                path(ctx, `M${x - 9} ${y - 10}l9 -5 9 5-9 5Z`, '#fff0c3', '#87947a', 1.6);
             }
         }
-        path(ctx, 'M1357 1178 1407 1118 1593 1118 1643 1178V1270L1593 1333H1407L1357 1270Z',
-            '#897884','#695965',5);
-        path(ctx, 'M1357 1164 1407 1104 1593 1104 1643 1164V1255L1593 1318H1407L1357 1255Z',
-            '#e4c6b4','#937b85',4);
-        path(ctx, 'M1375 1173 1418 1124 1582 1124 1625 1173V1251L1582 1299H1418L1375 1251Z',
-            '#d6c2b3','#ad9397',3);
-        oval(ctx,1500,1220,102,87,'#dfcdbd','#bea2a1',3);
-        oval(ctx,1500,1220,77,69,'#d7c4b5','#b9a1a0',2.5);
-        path(ctx,'M1500 1153 1563 1220 1500 1287 1437 1220Z',null,'#bba2a1',2.8);
-        for(const [x,y] of [[1410,1133],[1590,1133],[1410,1288],[1590,1288]]) {
-            oval(ctx,x,y+5,16,12,'#ac9498');
-            path(ctx,`M${x-11} ${y+1}v-26l11 -7 11 7v26l-11 8Z`,'#bda5a1','#8f777e',2.7);
-            path(ctx,`M${x-11} ${y-25}l11 -7 11 7-11 8Z`,'#f2d7b9','#8f777e',2.2);
-            oval(ctx,x,y-25,4,3,'#ba926e');
+        path(
+            ctx,
+            'M1357 1178 1407 1118 1593 1118 1643 1178V1270L1593 1333H1407L1357 1270Z',
+            '#897884',
+            '#695965',
+            5,
+        );
+        path(
+            ctx,
+            'M1357 1164 1407 1104 1593 1104 1643 1164V1255L1593 1318H1407L1357 1255Z',
+            '#e4c6b4',
+            '#937b85',
+            4,
+        );
+        path(
+            ctx,
+            'M1375 1173 1418 1124 1582 1124 1625 1173V1251L1582 1299H1418L1375 1251Z',
+            '#d6c2b3',
+            '#ad9397',
+            3,
+        );
+        oval(ctx, 1500, 1220, 102, 87, '#dfcdbd', '#bea2a1', 3);
+        oval(ctx, 1500, 1220, 77, 69, '#d7c4b5', '#b9a1a0', 2.5);
+        path(ctx, 'M1500 1153 1563 1220 1500 1287 1437 1220Z', null, '#bba2a1', 2.8);
+        for (const [x, y] of [
+            [1410, 1133],
+            [1590, 1133],
+            [1410, 1288],
+            [1590, 1288],
+        ]) {
+            oval(ctx, x, y + 5, 16, 12, '#ac9498');
+            path(ctx, `M${x - 11} ${y + 1}v-26l11 -7 11 7v26l-11 8Z`, '#bda5a1', '#8f777e', 2.7);
+            path(ctx, `M${x - 11} ${y - 25}l11 -7 11 7-11 8Z`, '#f2d7b9', '#8f777e', 2.2);
+            oval(ctx, x, y - 25, 4, 3, '#ba926e');
         }
         // River-bank reeds, floating leaves and the bridge flags break up the
         // large quiet areas without competing with moving troop silhouettes.
-        for(const [x,y] of [[1442,790],[1419,1034],[1519,1075],[1393,1130],[1550,1388]]){
-            path(ctx,`M${x-8} ${y}q2 -13 7 -20l-1 15 6 -21 0 20 8 -12 -4 16Z`,'#779961');
-            oval(ctx,x+17,y+6,7,3.2,'#a3cfa4');
-            oval(ctx,x+9,y+13,4.4,2.5,'#a8d3a7');
+        for (const [x, y] of [
+            [1442, 790],
+            [1419, 1034],
+            [1519, 1075],
+            [1393, 1130],
+            [1550, 1388],
+        ]) {
+            path(ctx, `M${x - 8} ${y}q2 -13 7 -20l-1 15 6 -21 0 20 8 -12 -4 16Z`, '#779961');
+            oval(ctx, x + 17, y + 6, 7, 3.2, '#a3cfa4');
+            oval(ctx, x + 9, y + 13, 4.4, 2.5, '#a8d3a7');
         }
-        for(const x of [1382,1618]) {
-            path(ctx,`M${x} 817v-36`,null,'#776c4f',3);
-            path(ctx,`M${x} 780l23 4-5 7-18 -3Z`,'#60a59a','#626f57',1.8);
-            oval(ctx,x,778,3,3,'#ead193');
+        for (const x of [1382, 1618]) {
+            path(ctx, `M${x} 817v-36`, null, '#776c4f', 3);
+            path(ctx, `M${x} 780l23 4-5 7-18 -3Z`, '#60a59a', '#626f57', 1.8);
+            oval(ctx, x, 778, 3, 3, '#ead193');
         }
         for (const [base, sign] of [
             [360, 1],
@@ -366,7 +555,8 @@
             if (random() < 0.55) put(x - direction * 57, y + 22, 0.62, boulder);
         }
         const rimClear = (x, y) =>
-            (y < 666 || y > 1390) && Math.abs(x - 1500) > 240 &&
+            (y < 666 || y > 1390) &&
+            Math.abs(x - 1500) > 240 &&
             ![360, 2640].some((h) => Math.abs(h - x) < 238 && Math.abs(y - 900) < 325) &&
             !(Math.abs(x - 1500) < 240 && Math.abs(y - 900) < 345);
         for (let row = 0; row < 8; row++) {
@@ -414,8 +604,13 @@
             put(x, y, 0.53, boulder);
             put(x + 16, y + 9, 0.48, flower);
         }
-        for(const [x,y,type] of [[1230,1057,0],[1773,1080,1],[1305,745,1],[1720,722,0]])
-            grove(x,y,type,0.58);
+        for (const [x, y, type] of [
+            [1230, 1057, 0],
+            [1773, 1080, 1],
+            [1305, 745, 1],
+            [1720, 722, 0],
+        ])
+            grove(x, y, type, 0.58);
         for (const o of objects.sort((a, b) => a.y - b.y)) {
             ctx.globalAlpha = trees.includes(o.sprite) ? 0.81 : 0.87;
             blit(ctx, o.sprite, o.x, o.y * K, o.s);
@@ -476,8 +671,10 @@
                                 const x = part.at[0] + col,
                                     y = part.at[1] + row;
                                 let distance = Infinity;
-                                if (part.id === 'body') distance = Math.abs(y - bandY - slope * (x - 96)) / 6.8;
-                                else if (type === 'shield') distance = Math.abs(y - 125 + 0.15 * (x - 120)) / 18;
+                                if (part.id === 'body')
+                                    distance = Math.abs(y - bandY - slope * (x - 96)) / 6.8;
+                                else if (type === 'shield')
+                                    distance = Math.abs(y - 125 + 0.15 * (x - 120)) / 18;
                                 else if (type === 'archer') distance = Math.abs(y - 78) / 21;
                                 else if (type === 'spear') distance = Math.abs(y - 25) / 21;
                                 else if (type === 'charger') distance = Math.abs(y - 78) / 14;
@@ -486,8 +683,11 @@
                                 const coverage = Math.min(1, (1 - distance) * 7);
                                 const { shadow, light } = trimPalette[side];
                                 for (let channel = 0; channel < 3; channel++) {
-                                    const shaded = shadow[channel] + (light[channel] - shadow[channel]) * gradient;
-                                    colors[i + channel] += coverage * (shaded - colors[i + channel]);
+                                    const shaded =
+                                        shadow[channel] +
+                                        (light[channel] - shadow[channel]) * gradient;
+                                    colors[i + channel] +=
+                                        coverage * (shaded - colors[i + channel]);
                                 }
                             }
                     }
@@ -502,15 +702,25 @@
     function actorSheets() {
         const source = globalThis.NumoriRigImage,
             data = globalThis.NumoriRigData;
-        if (!source || !data || !globalThis.NumoriActorRig || !(source.naturalWidth || source.width)) return null;
-        if (cachedActorSheet?.source === source && cachedActorSheet.data === data) return cachedActorSheet;
+        if (
+            !source ||
+            !data ||
+            !globalThis.NumoriActorRig ||
+            !(source.naturalWidth || source.width)
+        )
+            return null;
+        if (cachedActorSheet?.source === source && cachedActorSheet.data === data)
+            return cachedActorSheet;
         const scale = {};
         for (const type of sheetRoles) {
             const parts = data.roles[type];
             const x0 = Math.min(...parts.map((p) => p.at[0])),
                 y0 = Math.min(...parts.map((p) => p.at[1]));
             const x1 = Math.max(...parts.map((p) => p.at[0] + p.rect[2]));
-            scale[type] = Math.min(63 / Math.max(1, x1 - x0), actorHeight[type] / Math.max(1, data.foot[1] - y0));
+            scale[type] = Math.min(
+                63 / Math.max(1, x1 - x0),
+                actorHeight[type] / Math.max(1, data.foot[1] - y0),
+            );
         }
         cachedActorSheet = {
             source,
@@ -562,12 +772,24 @@
                     context.scale(density, density);
                     drawArt(context, art, type, side, clip, phase, 1, 0, 0, 1);
                     context.restore();
-                    const sprite = { img: atlas, w: width, h: height, ox, oy, source: { x, y, w: tileW, h: tileH } };
+                    const sprite = {
+                        img: atlas,
+                        w: width,
+                        h: height,
+                        ox,
+                        oy,
+                        source: { x, y, w: tileW, h: tileH },
+                    };
                     return [sprite, sprite];
                 }),
             );
         }
-        return { chars, art, bases: [baseArt(0), baseArt(1)], mine: [mineArt(false), mineArt(true)] };
+        return {
+            chars,
+            art,
+            bases: [baseArt(0), baseArt(1)],
+            mine: [mineArt(false), mineArt(true)],
+        };
     }
     function creature(type, side, pose, face) {
         const t = teams[side];
@@ -602,7 +824,13 @@
                     path(c, 'M-17 -17 -10 -15 M-18 -14 -10 -12', null, '#837651', 1.3);
                 }
                 if (type !== 'worker') {
-                    path(c, 'M-11 -16 Q-17 -17 -17 -9 L-21 -5 -13 -6 -16 0 -7 -4 -2 -12Z', t.mid, ink, 1.5);
+                    path(
+                        c,
+                        'M-11 -16 Q-17 -17 -17 -9 L-21 -5 -13 -6 -16 0 -7 -4 -2 -12Z',
+                        t.mid,
+                        ink,
+                        1.5,
+                    );
                 }
                 const body = type === 'worker' ? '#f8e0a4' : side ? '#f9bd98' : '#f4e6b1';
                 path(
@@ -660,7 +888,13 @@
                         path(c, 'M-10 -27 Q-19 -29 -18 -37 Q-14 -31 -8 -32Z', '#f3dfaf', ink, 1.4);
                         path(c, 'M7 -31 Q14 -34 15 -40 Q19 -30 11 -26Z', '#f9eac1', ink, 1.4);
                     } else if (type === 'spear') {
-                        path(c, 'M-1 -33 Q-10 -39 -3 -43 Q7 -44 10 -40 Q4 -41 3 -32Z', '#edbb6a', ink, 1.1);
+                        path(
+                            c,
+                            'M-1 -33 Q-10 -39 -3 -43 Q7 -44 10 -40 Q4 -41 3 -32Z',
+                            '#edbb6a',
+                            ink,
+                            1.1,
+                        );
                     }
                 }
                 oval(c, 2, -16, 1.6, 2.4, '#453d31');
@@ -703,7 +937,13 @@
                         path(c, 'M17 -35 Q11 -32 9 -36 L12 -29Z', t.flag, ink, 0.8);
                     }
                 } else if (type === 'shield') {
-                    path(c, 'M2 -23 16 -27 25 -21 24 -9 Q22 -2 13 2 L3 -5 -2 -13Z', '#edc673', ink, 2.1);
+                    path(
+                        c,
+                        'M2 -23 16 -27 25 -21 24 -9 Q22 -2 13 2 L3 -5 -2 -13Z',
+                        '#edc673',
+                        ink,
+                        2.1,
+                    );
                     path(c, 'M3 -21 16 -24 23 -19 21 -9 Q20 -4 13 -1 L6 -6 2 -13Z', t.deep);
                     path(c, 'M4 -22 15 -23 20 -20 16 -14 14 -3 7 -7Z', t.mid);
                     path(c, 'M11 -17 15 -20 19 -17 15 -12Z', '#fff0a9', ink, 0.7);
@@ -746,8 +986,13 @@
             mortar: bake(58, 34, 44, 17, (c) => {
                 path(c, 'M-41 0 Q-20 -11 -9 -6 L-10 7 Q-23 9 -41 0Z', team.flag + '9e');
                 path(c, 'M-28 0 -11 -6 -8 0 -12 5Z', '#ffde87');
-                path(c, 'M-9 -7 Q-2 -12 5 -9 Q12 -7 12 0 Q12 7 5 9 Q-3 12 -9 7Z',
-                    '#ffbb59', '#59362b', 2.3);
+                path(
+                    c,
+                    'M-9 -7 Q-2 -12 5 -9 Q12 -7 12 0 Q12 7 5 9 Q-3 12 -9 7Z',
+                    '#ffbb59',
+                    '#59362b',
+                    2.3,
+                );
                 path(c, 'M-6 -5 Q-2 -9 5 -6 M-11 -4 L-12 2', null, '#fff6c9', 2.8);
                 path(c, 'M0 -10 Q5 -4 5 7 L1 10 Q3 1 -3 -9Z', team.deep);
             }),
@@ -812,7 +1057,8 @@
                                 y = Math.floor(slot++ / 20) * h;
                             for (let i = 0; i < count; i++) {
                                 const [dx, dy] = count === 2 ? [i ? 8 : -8, i * 4 - 2] : offsets[i];
-                                const actor = chars[type][side][pose === 3 && i % 2 === 0 ? 1 : pose][facing];
+                                const actor =
+                                    chars[type][side][pose === 3 && i % 2 === 0 ? 1 : pose][facing];
                                 blit(gc, actor, x + 48 + dx, y + 58 + dy, 0.76);
                             }
                             sp.formations.push({
@@ -871,7 +1117,10 @@
         field.tabIndex = 0;
         const mini = document.createElement('canvas');
         mini.className = 'nr-map';
-        mini.setAttribute('aria-label', '미니맵. 눌러서 이동하고 거인 제단을 눌러 제단을 확대합니다.');
+        mini.setAttribute(
+            'aria-label',
+            '미니맵. 눌러서 이동하고 거인 제단을 눌러 제단을 확대합니다.',
+        );
         mini.width = 240;
         mini.height = 144;
         const controls = document.createElement('div');
@@ -899,7 +1148,8 @@
         let fallbackReason = '';
         let renderStats = { backend: 'canvas2d', drawCalls: 0 };
         const preferCanvas =
-            options.renderer === 'canvas2d' || new URLSearchParams(location.search).get('renderer') === 'canvas2d';
+            options.renderer === 'canvas2d' ||
+            new URLSearchParams(location.search).get('renderer') === 'canvas2d';
         if (!preferCanvas) {
             try {
                 device = NumoriGPU.create(gpuLayer);
@@ -924,12 +1174,23 @@
         const towersArt = turretArt(),
             ruinsArt = towerRubble(),
             towerFlash = bake(50, 50, 25, 25, (g) => {
-                path(g,'M-22 0-8 -4-9 -13-3 -9 0 -21 4 -8 13 -13 9 -3 22 1 8 5 13 12 4 9 0 21-5 9-14 13-11 4Z','#fff3bc','#d48349',2);
-                oval(g,0,0,5,4,'#fffcef');
+                path(
+                    g,
+                    'M-22 0-8 -4-9 -13-3 -9 0 -21 4 -8 13 -13 9 -3 22 1 8 5 13 12 4 9 0 21-5 9-14 13-11 4Z',
+                    '#fff3bc',
+                    '#d48349',
+                    2,
+                );
+                oval(g, 0, 0, 5, 4, '#fffcef');
             }),
             mortarFlash = bake(62, 60, 31, 47, (g) => {
-                path(g, 'M-26 3 -15 -7 -16 -18 -5 -14 0 -42 8 -19 18 -29 17 -13 27 -7 18 7 -11 8Z',
-                    '#ffcd6b', '#9c583b', 2.5);
+                path(
+                    g,
+                    'M-26 3 -15 -7 -16 -18 -5 -14 0 -42 8 -19 18 -29 17 -13 27 -7 18 7 -11 8Z',
+                    '#ffcd6b',
+                    '#9c583b',
+                    2.5,
+                );
                 path(g, 'M-12 4 -5 -12 2 -26 5 -9 13 -5 8 4Z', '#fff6c9');
             });
         const c = field.getContext('2d'),
@@ -1002,17 +1263,114 @@
                 ny = (dx / length) * thickness;
             gpu.part(linePixel, 1, 1, 1, 1, dx, dy, nx, ny, x - nx / 2, y - ny / 2, 1, color);
         }
+        function drawRouteCue(left, right, top, bottom) {
+            const cue = scene.routeCue;
+            const points = cue && Battle.routes[cue.route];
+            if (!points) return;
+            const colors = routeColors[cue.route];
+            const tints = routeTints[cue.route];
+            const dashed = cue.state === 'selected';
+            const scale = 1 / zoom;
+            const dash = 13 * scale;
+            const interval = 22 * scale;
+            const arrowInterval = 86 * scale;
+
+            function stroke(x, y, dx, dy, band, width) {
+                if (gpu) {
+                    gpuLine(x, y, dx, dy, width * scale, tints[band]);
+                    return;
+                }
+                c.beginPath();
+                c.moveTo(x, y);
+                c.lineTo(x + dx, y + dy);
+                c.lineWidth = width * scale;
+                c.strokeStyle = colors[band];
+                c.stroke();
+            }
+
+            if (!gpu) {
+                c.save();
+                c.lineCap = 'butt';
+            }
+            for (let i = 1; i < points.length; i++) {
+                const from = points[i - 1];
+                const to = points[i];
+                const y = from.y * K;
+                const endY = to.y * K;
+                if (
+                    from.x > right ||
+                    to.x < left ||
+                    Math.min(y, endY) > bottom ||
+                    Math.max(y, endY) < top
+                )
+                    continue;
+                const dx = to.x - from.x;
+                const dy = endY - y;
+                const length = Math.hypot(dx, dy);
+                const ux = dx / length;
+                const uy = dy / length;
+                const start = Math.max(0, (left - from.x) / ux);
+                const end = Math.min(length, (right - from.x) / ux);
+                for (let band = 0; band <= 1; band++) {
+                    const width = band === 0 ? 6 : 3;
+                    const stride = dashed ? interval : length;
+                    const mark = dashed ? dash : length;
+                    for (let d = Math.floor(start / stride) * stride; d < end; d += stride) {
+                        const size = Math.min(mark, length - d);
+                        stroke(from.x + ux * d, y + uy * d, ux * size, uy * size, band, width);
+                    }
+                    for (
+                        let d = (Math.floor(start / arrowInterval) + 0.5) * arrowInterval;
+                        d < Math.min(end, length - 12 * scale);
+                        d += arrowInterval
+                    ) {
+                        const tipX = from.x + ux * d;
+                        const tipY = y + uy * d;
+                        const backX = ux * attackDirection * 11 * scale;
+                        const backY = uy * attackDirection * 11 * scale;
+                        const crossX = -uy * 7 * scale;
+                        const crossY = ux * 7 * scale;
+                        stroke(tipX, tipY, -backX + crossX, -backY + crossY, band, width);
+                        stroke(tipX, tipY, -backX - crossX, -backY - crossY, band, width);
+                    }
+                }
+            }
+            if (!gpu) c.restore();
+        }
         const giantRadius = Battle.settings.captureRadius;
-        const captureZone = bake(giantRadius * 2 + 10, giantRadius * K * 2 + 10,
-            giantRadius + 5, giantRadius * K + 5, (g) => {
+        const captureZone = bake(
+            giantRadius * 2 + 10,
+            giantRadius * K * 2 + 10,
+            giantRadius + 5,
+            giantRadius * K + 5,
+            (g) => {
                 g.setLineDash([7, 9]);
                 oval(g, 0, 0, giantRadius, giantRadius * K, '#fff7cd28', '#8f7083', 2.8);
-            });
+            },
+        );
         const launchCircles = [0, 1].map((side) =>
             [false, true].map((bonus) =>
                 bake(200, 110, 100, 55, (context) => {
-                    oval(context, 0, 0, 96, 51, bonus ? '#fff4b52a' : teams[side].flag + '2a', teams[side].deep, 3);
-                    oval(context, 0, 0, 96, 51, 'transparent', bonus ? '#ffdf78' : teams[side].glow, 1.8);
+                    oval(
+                        context,
+                        0,
+                        0,
+                        96,
+                        51,
+                        bonus ? '#fff4b52a' : teams[side].flag + '2a',
+                        teams[side].deep,
+                        3,
+                    );
+                    oval(
+                        context,
+                        0,
+                        0,
+                        96,
+                        51,
+                        'transparent',
+                        bonus ? '#ffdf78' : teams[side].glow,
+                        1.8,
+                    );
                     if (bonus) oval(context, 0, 0, 76, 40, 'transparent', teams[side].glow, 1.6);
                 }),
             ),
@@ -1130,13 +1488,17 @@
             zoom = clamp(zoom, minimum, 2.8);
             cx = clamp(cx, viewW / (zoom * 2), W - viewW / (zoom * 2));
             cy = clamp(cy, viewH / (zoom * 2 * K), H - viewH / (zoom * 2 * K));
-            if (!resizing) Object.assign(framing, { x: cx, y: cy, zoom, width: viewW, height: viewH });
+            if (!resizing)
+                Object.assign(framing, { x: cx, y: cy, zoom, width: viewW, height: viewH });
             camera.setCamera({ x: cx, y: cy * K, zoom });
             miniAt = -1;
             terrainDirty = true;
         }
         function frameHome() {
-            const base = scene.battle?.bases?.[localSide] ?? { x: localSide === 0 ? 360 : W - 360, y: 900 };
+            const base = scene.battle?.bases?.[localSide] ?? {
+                x: localSide === 0 ? 360 : W - 360,
+                y: 900,
+            };
             zoom = homeZoom();
             cx = base.x + attackDirection * 16;
             // Fit the pennant and both supply mines above the mobile control rail.
@@ -1145,9 +1507,13 @@
         function battleSubject() {
             const b = scene.battle;
             if (!b) return { x: 1500, y: 900 };
-            const collapse = b.effects.findLast((effect) => effect.kind === 'towerDestroy' && effect.age < 0.78 &&
-                Math.abs(effect.x - cx) * zoom < viewW * 0.44 &&
-                Math.abs(effect.y - cy) * K * zoom < viewH * 0.42);
+            const collapse = b.effects.findLast(
+                (effect) =>
+                    effect.kind === 'towerDestroy' &&
+                    effect.age < 0.78 &&
+                    Math.abs(effect.x - cx) * zoom < viewW * 0.44 &&
+                    Math.abs(effect.y - cy) * K * zoom < viewH * 0.42,
+            );
             if (collapse) return { x: collapse.x, y: collapse.y, siege: true };
             let clash = null,
                 siege = null,
@@ -1157,14 +1523,19 @@
                 siegeScore = Infinity;
             for (const u of b.units) {
                 if (u.hp <= 0) continue;
-                if (u.side === localSide && (!advance || (u.x - advance.x) * attackDirection > 0)) advance = u;
-                if (u.side === enemySide && (!enemy || (u.x - enemy.x) * attackDirection < 0)) enemy = u;
+                if (u.side === localSide && (!advance || (u.x - advance.x) * attackDirection > 0))
+                    advance = u;
+                if (u.side === enemySide && (!enemy || (u.x - enemy.x) * attackDirection < 0))
+                    enemy = u;
                 const target = u.target,
                     structure = u.structureTarget;
                 if (!target && structure?.hp > 0 && !u.moving) {
                     const dist = Math.hypot(u.x - structure.x, u.y - structure.y);
                     if (dist < (u.spec?.range ?? 0) + 110) {
-                        const rank = (u.side === enemySide ? 0 : 1000) + dist - (trackedUnit === u ? 240 : 0);
+                        const rank =
+                            (u.side === enemySide ? 0 : 1000) +
+                            dist -
+                            (trackedUnit === u ? 240 : 0);
                         if (rank < siegeScore) {
                             siege = { u, structure };
                             siegeScore = rank;
@@ -1200,7 +1571,9 @@
             const front = advance ?? enemy;
             if (front) {
                 const u =
-                    trackedUnit?.hp > 0 && trackedUnit.side === front.side && Math.abs(trackedUnit.x - front.x) < 105
+                    trackedUnit?.hp > 0 &&
+                    trackedUnit.side === front.side &&
+                    Math.abs(trackedUnit.x - front.x) < 105
                         ? trackedUnit
                         : front;
                 trackedUnit = u;
@@ -1216,7 +1589,9 @@
                 nextScan = clock + 0.24;
             }
             const desiredZoom = fightZoom(tracked.siege);
-            const desiredY = tracked.y + ((tracked.siege ? -50 : -17) + Math.min(18, viewH * 0.07) / desiredZoom) / K;
+            const desiredY =
+                tracked.y +
+                ((tracked.siege ? -50 : -17) + Math.min(18, viewH * 0.07) / desiredZoom) / K;
             if (snap) {
                 cx = tracked.x;
                 cy = desiredY;
@@ -1239,23 +1614,34 @@
         let convoyUnit = null;
         let captureRailClearance = 46;
         function frameConvoy(snap, dt) {
-            const battle = scene.battle, station = battle?.station;
-            if (!convoyUnit || !station) return;
+            const battle = scene.battle;
+            if (!convoyUnit || !battle) return;
+            const { route, born } = convoyUnit;
+            const destination = route === 'supply' ? battle.station : Battle.routes.bridge[1];
             if (convoyUnit.hp <= 0) {
-                const born = convoyUnit.born;
-                convoyUnit = battle.units.findLast(u=>u.side===localSide && u.route==='supply' && u.born===born && u.hp>0);
+                convoyUnit = battle.units.findLast(
+                    (u) =>
+                        u.side === localSide &&
+                        u.route === route &&
+                        u.born === born &&
+                        !u.giantKind &&
+                        u.hp > 0,
+                );
             }
-            if (!convoyUnit || Math.hypot(convoyUnit.x-station.x,convoyUnit.y-station.y)<140) {
-                navigate('supply');
+            if (
+                !convoyUnit ||
+                Math.hypot(convoyUnit.x - destination.x, convoyUnit.y - destination.y) < 140
+            ) {
+                navigate(route === 'supply' ? 'supply' : 'battle');
                 return;
             }
             const destinationX = convoyUnit.x + attackDirection * 52;
             const destinationY = convoyUnit.y + 10;
-            const nextZoom = Math.min(1.38, viewW/330, Math.max(0.54,(viewH-53)/(216*K)));
-            const alpha = snap ? 1 : 1-Math.exp(-Math.max(0,dt)*5);
-            cx += (destinationX-cx)*alpha;
-            cy += (destinationY-cy)*alpha;
-            zoom += (nextZoom-zoom)*alpha;
+            const nextZoom = Math.min(1.38, viewW / 330, Math.max(0.54, (viewH - 53) / (216 * K)));
+            const alpha = snap ? 1 : 1 - Math.exp(-Math.max(0, dt) * 5);
+            cx += (destinationX - cx) * alpha;
+            cy += (destinationY - cy) * alpha;
+            zoom += (nextZoom - zoom) * alpha;
             constrain();
         }
         function frameRoutes(name) {
@@ -1264,6 +1650,9 @@
                 cx -= attackDirection * 273;
                 cy = 1074;
                 zoom = Math.min(1.22, viewW / 860, Math.max(0.26, (viewH - 86) / (565 * K)));
+            } else if (name === 'route-cue') {
+                cy = 1040;
+                zoom = Math.min(0.98, viewW / 590, Math.max(0.28, (viewH - 92) / (470 * K)));
             } else if (name === 'supply') {
                 if (viewH > 295) {
                     cy = 1080;
@@ -1276,7 +1665,7 @@
                 }
             } else {
                 cy = 1040;
-                zoom = Math.min(viewW/2630,(viewH-60)/(910*K));
+                zoom = Math.min(viewW / 2630, (viewH - 60) / (910 * K));
             }
         }
         function navigate(name) {
@@ -1289,7 +1678,7 @@
                 setMode(name);
                 frameBattle(true);
             }
-            if (name === 'overview' || name === 'supply') {
+            if (name === 'overview' || name === 'supply' || name === 'route-cue') {
                 setMode(name);
                 frameRoutes(name);
             }
@@ -1303,7 +1692,8 @@
             btn.title = labels[name];
             btn.setAttribute('aria-label', labels[name]);
             btn.dataset.camera = name;
-            btn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="' + icons[name] + '"/></svg>';
+            btn.innerHTML =
+                '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="' + icons[name] + '"/></svg>';
             controls.append(btn);
             btn.addEventListener('click', () => navigate(name), on);
         }
@@ -1323,7 +1713,13 @@
             captureRailClearance = Math.max(46, h - mini.offsetTop + 4, h - controls.offsetTop + 4);
             if (mode === 'home') frameHome();
             else if (mode === 'battle') frameBattle(true);
-            else if (mode === 'overview' || mode === 'supply' || mode === 'routes') frameRoutes(mode);
+            else if (
+                mode === 'overview' ||
+                mode === 'supply' ||
+                mode === 'routes' ||
+                mode === 'route-cue'
+            )
+                frameRoutes(mode);
             else {
                 cx = framing.x;
                 cy = framing.y;
@@ -1364,10 +1760,15 @@
                 if (!old) return;
                 const next = fieldPoint(e),
                     other = [...pointers].find(([id]) => id !== e.pointerId)?.[1];
-                if (stationTap && pair(stationTap,next) > 5) stationTap = null;
+                if (stationTap && pair(stationTap, next) > 5) stationTap = null;
                 if (other) {
                     const d = pair(old, other);
-                    if (d > 4) setZoom(pair(next, other) / d, (next.x + other.x) * 0.5, (next.y + other.y) * 0.5);
+                    if (d > 4)
+                        setZoom(
+                            pair(next, other) / d,
+                            (next.x + other.x) * 0.5,
+                            (next.y + other.y) * 0.5,
+                        );
                 }
                 cx -= ((next.x - old.x) / zoom) * (other ? 0.5 : 1);
                 cy -= ((next.y - old.y) / (zoom * K)) * (other ? 0.5 : 1);
@@ -1377,17 +1778,26 @@
             },
             on,
         );
-        field.addEventListener('pointerup',(e)=>{
-            const pt=fieldPoint(e), st=scene.battle?.station;
-            if(stationTap && pair(stationTap,pt)<=5 && st) {
-                const x=cx+(pt.x-viewW/2)/zoom;
-                const y=cy*K+(pt.y-viewH/2)/zoom;
-                const nearAltar = Math.abs(x - st.x) < 87 && Math.abs(y - st.y * K) < 54;
-                const onGiant = st.giantKind && Math.abs(x - st.x) < 65 && y > st.y * K - 144 && y < st.y * K;
-                if (nearAltar || onGiant) navigate('supply');
-            }
-            stationTap=null;
-        },on);
+        field.addEventListener(
+            'pointerup',
+            (e) => {
+                const pt = fieldPoint(e),
+                    st = scene.battle?.station;
+                if (stationTap && pair(stationTap, pt) <= 5 && st) {
+                    const x = cx + (pt.x - viewW / 2) / zoom;
+                    const y = cy * K + (pt.y - viewH / 2) / zoom;
+                    const nearAltar = Math.abs(x - st.x) < 87 && Math.abs(y - st.y * K) < 54;
+                    const onGiant =
+                        st.giantKind &&
+                        Math.abs(x - st.x) < 65 &&
+                        y > st.y * K - 144 &&
+                        y < st.y * K;
+                    if (nearAltar || onGiant) navigate('supply');
+                }
+                stationTap = null;
+            },
+            on,
+        );
         field.addEventListener('lostpointercapture', (e) => pointers.delete(e.pointerId), on);
         field.addEventListener(
             'wheel',
@@ -1398,7 +1808,16 @@
             },
             { ...on, passive: false },
         );
-        const panKeys = new Set(['a', 'd', 'w', 's', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown']);
+        const panKeys = new Set([
+            'a',
+            'd',
+            'w',
+            's',
+            'arrowleft',
+            'arrowright',
+            'arrowup',
+            'arrowdown',
+        ]);
         window.addEventListener(
             'keydown',
             (e) => {
@@ -1406,13 +1825,16 @@
                     e.altKey ||
                     e.metaKey ||
                     e.ctrlKey ||
-                    e.target.closest?.('input,textarea,select,[contenteditable="true"],dialog[open]') ||
+                    e.target.closest?.(
+                        'input,textarea,select,[contenteditable="true"],dialog[open]',
+                    ) ||
                     !field.getClientRects().length
                 )
                     return;
                 const k = e.key.toLowerCase();
                 if (!panKeys.has(k)) return;
-                if (k.startsWith('arrow') && e.target !== field && e.target !== document.body) return;
+                if (k.startsWith('arrow') && e.target !== field && e.target !== document.body)
+                    return;
                 keys.add(k);
                 e.preventDefault();
             },
@@ -1429,28 +1851,41 @@
             constrain();
         }
         let miniTap = null;
-        mini.addEventListener('pointerdown', (e) => {
-            miniTap={x:e.clientX,y:e.clientY};
-            mini.setPointerCapture(e.pointerId);
-            moveMini(e);
-        },on);
-        mini.addEventListener('pointermove',(e)=>{
-            if (!mini.hasPointerCapture(e.pointerId)) return;
-            if (miniTap && Math.hypot(e.clientX-miniTap.x,e.clientY-miniTap.y)>5) miniTap=null;
-            moveMini(e);
-        },on);
-        mini.addEventListener('pointerup',(e)=>{
-            const st=scene.battle?.station;
-            if(st && miniTap){
-                const r=mini.getBoundingClientRect();
-                const dx=e.clientX-r.left-st.x/W*r.width;
-                const dy=e.clientY-r.top-st.y/H*r.height;
-                if(Math.abs(dx)<8 && Math.abs(dy)<Math.min(9,r.height*0.085)){
-                    navigate('supply');
+        mini.addEventListener(
+            'pointerdown',
+            (e) => {
+                miniTap = { x: e.clientX, y: e.clientY };
+                mini.setPointerCapture(e.pointerId);
+                moveMini(e);
+            },
+            on,
+        );
+        mini.addEventListener(
+            'pointermove',
+            (e) => {
+                if (!mini.hasPointerCapture(e.pointerId)) return;
+                if (miniTap && Math.hypot(e.clientX - miniTap.x, e.clientY - miniTap.y) > 5)
+                    miniTap = null;
+                moveMini(e);
+            },
+            on,
+        );
+        mini.addEventListener(
+            'pointerup',
+            (e) => {
+                const st = scene.battle?.station;
+                if (st && miniTap) {
+                    const r = mini.getBoundingClientRect();
+                    const dx = e.clientX - r.left - (st.x / W) * r.width;
+                    const dy = e.clientY - r.top - (st.y / H) * r.height;
+                    if (Math.abs(dx) < 8 && Math.abs(dy) < Math.min(9, r.height * 0.085)) {
+                        navigate('supply');
+                    }
                 }
-            }
-            miniTap=null;
-        },on);
+                miniTap = null;
+            },
+            on,
+        );
         function structures() {
             const b = scene.battle,
                 e = scene.economy,
@@ -1490,15 +1925,43 @@
             const routes = globalThis.Battle.routes;
             if (routes) {
                 m.save();
-                m.scale(mx,my);
-                for (const [key,tint] of [['supply','#b87a30'],['bridge','#f9f0ce']]) {
+                m.scale(mx, my);
+                for (const [key, tint] of [
+                    ['supply', '#b87a30'],
+                    ['bridge', '#f9f0ce'],
+                ]) {
                     const points = routes[key];
                     const line = new Path2D();
-                    points.forEach(({x,y},i)=>i ? line.lineTo(x,y) : line.moveTo(x,y));
-                    m.lineCap='round';m.lineJoin='round';
-                    m.lineWidth=61;m.strokeStyle='#596747';m.stroke(line);
-                    m.lineWidth=37;m.strokeStyle=tint;m.stroke(line);
+                    points.forEach(({ x, y }, i) => (i ? line.lineTo(x, y) : line.moveTo(x, y)));
+                    m.lineCap = 'round';
+                    m.lineJoin = 'round';
+                    m.lineWidth = 61;
+                    m.strokeStyle = '#596747';
+                    m.stroke(line);
+                    m.lineWidth = 37;
+                    m.strokeStyle = tint;
+                    m.stroke(line);
                 }
+                m.restore();
+            }
+            const cue = scene.routeCue;
+            if (cue && routes?.[cue.route]) {
+                const points = routes[cue.route];
+                const colors = routeColors[cue.route];
+                m.save();
+                m.beginPath();
+                points.forEach(({ x, y }, i) =>
+                    i ? m.lineTo(x * mx, y * my) : m.moveTo(x * mx, y * my),
+                );
+                m.lineJoin = 'round';
+                m.lineCap = 'round';
+                if (cue.state === 'selected') m.setLineDash([10, 7]);
+                m.lineWidth = 13;
+                m.strokeStyle = colors[0];
+                m.stroke();
+                m.lineWidth = 8;
+                m.strokeStyle = colors[1];
+                m.stroke();
                 m.restore();
             }
             for (let side = 0; side < 2; side++) {
@@ -1534,22 +1997,36 @@
                 m.save();
                 m.translate(tower.x * mx, tower.y * my);
                 if (tower.hp > 0) {
-                    path(m, 'M0 -6 5 0 0 6 -5 0Z', teamColors[tower.side].flag, teamColors[tower.side].deep, 1.6);
+                    path(
+                        m,
+                        'M0 -6 5 0 0 6 -5 0Z',
+                        teamColors[tower.side].flag,
+                        teamColors[tower.side].deep,
+                        1.6,
+                    );
                 } else {
                     path(m, 'M-3 -3 3 3 M3 -3 -3 3', null, '#615548', 1.7);
                 }
                 m.restore();
             }
             if (s.station) {
-                const x=s.station.x*mx, y=s.station.y*my;
+                const x = s.station.x * mx,
+                    y = s.station.y * my;
                 // The wide bridge and round altar remain distinguishable on a phone.
-                m.save();m.translate(x,900*my);
-                path(m,'M-10 -4 H10 V4 H-10Z','#fff4ce','#516654',2);
-                path(m,'M-7 -5v10m14 -10v10',null,'#55664f',2.4);
+                m.save();
+                m.translate(x, 900 * my);
+                path(m, 'M-10 -4 H10 V4 H-10Z', '#fff4ce', '#516654', 2);
+                path(m, 'M-7 -5v10m14 -10v10', null, '#55664f', 2.4);
                 m.restore();
-                m.save();m.translate(x,y);
-                path(m, 'M-9 -4 -5 -8 5 -8 9 -4 9 4 5 8 -5 8 -9 4Z',
-                    s.station.giantKind ? '#ffddb5' : '#d0aeac', '#654d62', 1.8);
+                m.save();
+                m.translate(x, y);
+                path(
+                    m,
+                    'M-9 -4 -5 -8 5 -8 9 -4 9 4 5 8 -5 8 -9 4Z',
+                    s.station.giantKind ? '#ffddb5' : '#d0aeac',
+                    '#654d62',
+                    1.8,
+                );
                 if (s.station.giantKind)
                     path(m, 'M-4 3v-6l2 -2 2 1 2 -1 2 2v6Z', '#876e87', '#59465b', 1.2);
                 m.restore();
@@ -1558,12 +2035,20 @@
                 if (!unit.giantKind) continue;
                 m.save();
                 m.translate(unit.x * mx, unit.y * my);
-                path(m, 'M-7 3 -7 -4 -3 -8 3 -8 7 -4 7 3 0 7Z',
-                    teamColors[unit.side].flag, teamColors[unit.side].deep, 2);
+                path(
+                    m,
+                    'M-7 3 -7 -4 -3 -8 3 -8 7 -4 7 3 0 7Z',
+                    teamColors[unit.side].flag,
+                    teamColors[unit.side].deep,
+                    2,
+                );
                 path(m, 'M-3 -2h1m4 0h1', null, teamColors[unit.side].deep, 2);
                 m.restore();
             }
-            if ((b?.effects ?? []).some((f) => f.kind === 'hit' || f.kind === 'blast') && b?.focus) {
+            if (
+                (b?.effects ?? []).some((f) => f.kind === 'hit' || f.kind === 'blast') &&
+                b?.focus
+            ) {
                 const f = b.focus;
                 m.fillStyle = '#fff5b0';
                 m.beginPath();
@@ -1585,7 +2070,10 @@
             const [allies, enemies] = station
                 ? [station.presence[localSide], station.presence[enemySide]]
                 : [0, 0];
-            const fresh = station && !station.giantKind && station.lastRecruit &&
+            const fresh =
+                station &&
+                !station.giantKind &&
+                station.lastRecruit &&
                 time - station.lastRecruit.time < 2.4;
             const active = station?.giantKind && allies + enemies > 0;
             const x = station ? (station.x - cx) * zoom + viewW / 2 : -1;
@@ -1595,7 +2083,8 @@
             if (captureCard.hidden !== !show) captureCard.hidden = !show;
             if (!show) return false;
 
-            const relation = (side) => side < 0 ? 'neutral' : side === localSide ? 'ally' : 'enemy';
+            const relation = (side) =>
+                side < 0 ? 'neutral' : side === localSide ? 'ally' : 'enemy';
             const side = fresh ? station.lastRecruit.side : station.claimant;
             const team = side === localSide ? '아군' : '적군';
             const progress = fresh ? 1 : clamp(station.progress, 0, 1);
@@ -1618,16 +2107,22 @@
                 const seconds = Battle.settings.captureSeconds * (1 - progress);
                 remaining = (Math.max(1, Math.ceil(seconds * 10 - 1e-8)) / 10).toFixed(1) + '초';
             }
-            const count = fresh ? Battle.giants[station.lastRecruit.giantKind].name + ' 합류'
+            const count = fresh
+                ? Battle.giants[station.lastRecruit.giantKind].name + ' 합류'
                 : '아군 ' + allies + ' · 적군 ' + enemies;
-            for (const [node, value] of [[captureLabel, heading], [captureRemaining, remaining], [captureCount, count]]) {
+            for (const [node, value] of [
+                [captureLabel, heading],
+                [captureRemaining, remaining],
+                [captureCount, count],
+            ]) {
                 if (node.textContent !== value) node.textContent = value;
             }
             const progressSide = relation(side);
             const cardSide = state === 'contested' ? 'neutral' : progressSide;
             if (captureCard.dataset.state !== state) captureCard.dataset.state = state;
             if (captureCard.dataset.side !== cardSide) captureCard.dataset.side = cardSide;
-            if (captureCard.dataset.progressSide !== progressSide) captureCard.dataset.progressSide = progressSide;
+            if (captureCard.dataset.progressSide !== progressSide)
+                captureCard.dataset.progressSide = progressSide;
             captureCard.style.setProperty('--capture-progress', progress);
 
             const width = 158;
@@ -1647,7 +2142,8 @@
             }
             left = clamp(left, 4, Math.max(4, viewW - width - 4));
             top = clamp(top, topLimit, bottomLimit);
-            captureCard.style.transform = 'translate(' + Math.round(left) + 'px, ' + Math.round(top) + 'px)';
+            captureCard.style.transform =
+                'translate(' + Math.round(left) + 'px, ' + Math.round(top) + 'px)';
             return true;
         }
         function drawCaptureProgress(n) {
@@ -1664,7 +2160,14 @@
                     const radians = (angle * i) / segments - Math.PI / 2;
                     const nextX = x + radius * Math.cos(radians),
                         nextY = y + radius * K * Math.sin(radians);
-                    gpuLine(previousX, previousY, nextX - previousX, nextY - previousY, 5, healthTint[relativeSide(n.claimant)]);
+                    gpuLine(
+                        previousX,
+                        previousY,
+                        nextX - previousX,
+                        nextY - previousY,
+                        5,
+                        healthTint[relativeSide(n.claimant)],
+                    );
                     previousX = nextX;
                     previousY = nextY;
                 }
@@ -1702,12 +2205,13 @@
             c.restore();
         }
         function tag(x, y, text, team, ratio) {
-            if (zoom < 0.42 && mode !== 'overview' && mode !== 'routes' && mode !== 'supply') return;
+            if (zoom < 0.42 && !['overview', 'routes', 'route-cue', 'supply'].includes(mode))
+                return;
             c.save();
             c.font = '700 10px system-ui,sans-serif';
             const w = Math.ceil(c.measureText(text).width) + 20;
-            const inset = (viewW/2 - w/2 - 4)/zoom;
-            c.translate(clamp(x,cx-inset,cx+inset), y);
+            const inset = (viewW / 2 - w / 2 - 4) / zoom;
+            c.translate(clamp(x, cx - inset, cx + inset), y);
             c.scale(1 / zoom, 1 / zoom);
             c.beginPath();
             c.roundRect(-w / 2, -9, w, 18, 8);
@@ -1785,7 +2289,10 @@
             c.font = '750 10px system-ui, sans-serif';
             const headingWidth = matched ? c.measureText(heading).width : 0;
             c.font = '800 14px system-ui, sans-serif';
-            const width = Math.min(viewW - 8, Math.ceil(Math.max(c.measureText(count).width, headingWidth)) + 24);
+            const width = Math.min(
+                viewW - 8,
+                Math.ceil(Math.max(c.measureText(count).width, headingWidth)) + 24,
+            );
             // Keep the label inside the map viewport without moving the camera or covering its controls.
             const half = width / (2 * zoom);
             const viewLeft = cx - viewW / (2 * zoom);
@@ -1796,10 +2303,15 @@
                 c.restore();
                 return;
             }
-            const x = clamp(f.x, viewLeft + half + 4 / zoom, viewLeft + viewW / zoom - half - 4 / zoom);
+            const x = clamp(
+                f.x,
+                viewLeft + half + 4 / zoom,
+                viewLeft + viewW / zoom - half - 4 / zoom,
+            );
             const screenY = spawnY - 64 - rise;
             const safeTop = viewH < 180 ? 38 : 25;
-            const y = viewTop + clamp(screenY, safeTop + height / 2, viewH - 46 - height / 2) / zoom;
+            const y =
+                viewTop + clamp(screenY, safeTop + height / 2, viewH - 46 - height / 2) / zoom;
             c.translate(x, y);
             c.scale(1 / zoom, 1 / zoom);
             c.globalAlpha = Math.min(1, (1 - f.age / f.life) * 3);
@@ -1910,9 +2422,20 @@
                 const angle = i * 2.4;
                 const x = effect.x + Math.cos(angle) * (16 + 73 * burst);
                 const dy = Math.sin(angle) * (9 + 30 * burst) - Math.sin(burst * Math.PI) * 40;
-                const radius = (i % 3 + 1) * 2.4 + 4 * progress;
+                const radius = ((i % 3) + 1) * 2.4 + 4 * progress;
                 if (gpu) gpuDot(x, y + dy, radius, radius * 0.65, dustTint, alpha);
-                else oval(c, x, y + dy, radius, radius * 0.65, '#ffdf9e' + Math.round(alpha * 255).toString(16).padStart(2,'0'));
+                else
+                    oval(
+                        c,
+                        x,
+                        y + dy,
+                        radius,
+                        radius * 0.65,
+                        '#ffdf9e' +
+                            Math.round(alpha * 255)
+                                .toString(16)
+                                .padStart(2, '0'),
+                    );
             }
         }
         function drawMuzzle(building, y, time) {
@@ -1944,11 +2467,18 @@
             const idle = animate && neutral ? Math.sin(time * 2.3) * 1.8 : 0;
             const lunge = animate ? (unit.attack || 0) * 9 : 0;
             const facing = unit.facing === -1 ? -1 : 1;
-            const x = unit.x, y = unit.y * K;
+            const x = unit.x,
+                y = unit.y * K;
             if (gpu) {
                 gpuSprite(actorShadow, x, y + 1, 2.8);
-                gpuSprite(sprite, x + lunge * facing, y - Math.abs(walk) * 6 + idle,
-                    1, facing, walk * 0.045);
+                gpuSprite(
+                    sprite,
+                    x + lunge * facing,
+                    y - Math.abs(walk) * 6 + idle,
+                    1,
+                    facing,
+                    walk * 0.045,
+                );
             } else {
                 blit(c, actorShadow, x, y + 1, 2.8);
                 c.save();
@@ -1972,7 +2502,11 @@
                 clip = 'dig';
                 phase = (elapsed / 0.58) % 1;
                 bin = phase < 0.5 ? 3 : 7;
-            } else if (type === 'shield' && Number.isFinite(u.lastBlockTime) && time - u.lastBlockTime < 0.24) {
+            } else if (
+                type === 'shield' &&
+                Number.isFinite(u.lastBlockTime) &&
+                time - u.lastBlockTime < 0.24
+            ) {
                 clip = 'block';
                 phase = (time - u.lastBlockTime) / 0.24;
                 bin = 4;
@@ -2010,7 +2544,12 @@
             const side = relativeSide(worker ? u.team : u.side);
             if (a.art && near) {
                 if (gpu) {
-                    gpuSprite(actorShadow, x, y, scale * (type === 'shield' || type === 'thrower' ? 1.05 : 0.8));
+                    gpuSprite(
+                        actorShadow,
+                        x,
+                        y,
+                        scale * (type === 'shield' || type === 'thrower' ? 1.05 : 0.8),
+                    );
                     const factor = a.art.scale[type] * scale;
                     a.art.rig.drawGPU(
                         gpu,
@@ -2028,7 +2567,13 @@
                 } else drawArt(c, a.art, type, side, clip, phase, facing, x, y, scale);
                 rigStats.direct++;
             } else {
-                const frame = a.art ? bin : clip === 'walk' ? bin : ['attack', 'dig', 'brace'].includes(clip) ? 3 : 0;
+                const frame = a.art
+                    ? bin
+                    : clip === 'walk'
+                      ? bin
+                      : ['attack', 'dig', 'brace'].includes(clip)
+                        ? 3
+                        : 0;
                 const sp = a.chars[type]?.[side]?.[frame]?.[facing < 0 ? 0 : 1];
                 if (sp && gpu) {
                     gpuSprite(sp, x, y, scale, a.art ? facing : 1);
@@ -2076,6 +2621,11 @@
             return roleScale[type] ?? 0.72;
         }
         function render(next = scene, dt = 1 / 60) {
+            if (
+                next?.routeCue?.route !== scene.routeCue?.route ||
+                next?.routeCue?.state !== scene.routeCue?.state
+            )
+                miniAt = -1;
             scene = next ?? {};
             if (!a.art && globalThis.NumoriRigImage) a = sprites();
             clock += Math.min(0.15, Math.max(0, dt || 0));
@@ -2087,10 +2637,12 @@
                 setMode('manual');
                 const speed = (Math.min(0.08, dt || 0) * 550) / zoom;
                 cx +=
-                    (Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'))) *
+                    (Number(keys.has('d') || keys.has('arrowright')) -
+                        Number(keys.has('a') || keys.has('arrowleft'))) *
                     speed;
                 cy +=
-                    ((Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup'))) *
+                    ((Number(keys.has('s') || keys.has('arrowdown')) -
+                        Number(keys.has('w') || keys.has('arrowup'))) *
                         speed) /
                     K;
                 constrain();
@@ -2113,7 +2665,12 @@
                     if (gpu) {
                         const stats = gpu.end();
                         renderStats = { ...stats, pipeline: stats.backend, backend: 'webgl2' };
-                    } else renderStats = { backend: 'canvas2d', drawCalls: 0, reason: 'webgl-context-unavailable' };
+                    } else
+                        renderStats = {
+                            backend: 'canvas2d',
+                            drawCalls: 0,
+                            reason: 'webgl-context-unavailable',
+                        };
                     return;
                 } catch (error) {
                     // A lost/restoring context can be used on a later frame. A persistent
@@ -2156,10 +2713,18 @@
                 top = cy * K - viewH / (zoom * 2) - 45,
                 bottom = cy * K + viewH / (zoom * 2) + 175;
             const visible = (x, y) => x >= left && x <= right && y * K >= top && y * K <= bottom;
-            combatFx?.drawGround(c, b, { gpu, zoom, heightScale: K, visible, reducedMotion: reducedMotion.matches });
+            drawRouteCue(left, right, top, bottom);
+            combatFx?.drawGround(c, b, {
+                gpu,
+                zoom,
+                heightScale: K,
+                visible,
+                reducedMotion: reducedMotion.matches,
+            });
             const launches = [null, null];
             for (const f of b?.effects ?? []) {
-                if ((f.kind === 'summon' || f.kind === 'bonus') && visible(f.x, f.y)) launches[f.side] = f;
+                if ((f.kind === 'summon' || f.kind === 'bonus') && visible(f.x, f.y))
+                    launches[f.side] = f;
             }
             const drawables = [];
             s.base.forEach((obj, side) => {
@@ -2168,13 +2733,16 @@
             for (const obj of s.towers)
                 if (visible(obj.x, obj.y)) drawables.push({ kind: 'tower', obj });
             for (const obj of s.mines)
-                if (visible(obj.x, obj.y)) drawables.push({kind:'mine',obj});
+                if (visible(obj.x, obj.y)) drawables.push({ kind: 'mine', obj });
             const station = s.station;
             if (station?.giantKind && visible(station.x, station.y)) {
                 if (gpu) gpuSprite(captureZone, station.x, station.y * K);
                 else blit(c, captureZone, station.x, station.y * K);
                 drawCaptureProgress(station);
-                drawables.push({kind:'neutralGiant', obj:{x:station.x, y:station.y, side:-1, giantKind:station.giantKind}});
+                drawables.push({
+                    kind: 'neutralGiant',
+                    obj: { x: station.x, y: station.y, side: -1, giantKind: station.giantKind },
+                });
             }
             for (const team of e?.sides ?? [])
                 for (const obj of team.workers ?? []) {
@@ -2185,15 +2753,20 @@
             if (dense) {
                 // Preserve every simulated agent. A screen-space cell draws its frontmost
                 // soldier for each faction where individual silhouettes overlap.
-                const spacing = Math.max(18, Math.min(46, Math.sqrt(soldiers.length) * 0.68)) / Math.min(1.6, zoom);
+                const spacing =
+                    Math.max(18, Math.min(46, Math.sqrt(soldiers.length) * 0.68)) /
+                    Math.min(1.6, zoom);
                 formationCells.clear();
                 for (const obj of soldiers) {
                     if (!visible(obj.x, obj.y)) continue;
                     if (obj.giantKind) {
-                        drawables.push({kind:'unit', obj});
+                        drawables.push({ kind: 'unit', obj });
                         continue;
                     }
-                    const key = (Math.floor(obj.x / spacing) * 4096 + Math.floor((obj.y * K) / spacing)) * 2 + obj.side;
+                    const key =
+                        (Math.floor(obj.x / spacing) * 4096 + Math.floor((obj.y * K) / spacing)) *
+                            2 +
+                        obj.side;
                     const cell = formationCells.get(key);
                     if (!cell) formationCells.set(key, { kind: 'unit', obj, count: 1 });
                     else {
@@ -2202,7 +2775,9 @@
                     }
                 }
                 for (const cell of formationCells.values()) drawables.push(cell);
-            } else for (const obj of soldiers) if (visible(obj.x, obj.y)) drawables.push({ kind: 'unit', obj });
+            } else
+                for (const obj of soldiers)
+                    if (visible(obj.x, obj.y)) drawables.push({ kind: 'unit', obj });
             const articulateAll = !dense && drawables.length <= 105;
             rigStats.direct = rigStats.lod = 0;
             for (const launch of launches) if (launch) drawLaunchRings(launch);
@@ -2213,8 +2788,12 @@
                     y = u.y * K;
                 if (d.kind === 'base' || d.kind === 'tower') {
                     const side = u.side ?? d.side;
-                    const sprite = d.kind === 'base' ? a.bases[relativeSide(side)] :
-                        u.hp > 0 ? towersArt[relativeSide(side)] : ruinsArt;
+                    const sprite =
+                        d.kind === 'base'
+                            ? a.bases[relativeSide(side)]
+                            : u.hp > 0
+                              ? towersArt[relativeSide(side)]
+                              : ruinsArt;
                     if (gpu) gpuSprite(sprite, x, y);
                     else blit(c, sprite, x, y);
                     if (d.kind === 'base') siegeDamage(u, side, t);
@@ -2239,7 +2818,13 @@
                 const { side, type } = u;
                 const facing = u.facing === -1 ? -1 : 1;
                 const scale = groupScale(type);
-                if (!dense && type === 'charger' && u.chargeReady && u.moving && !reducedMotion.matches) {
+                if (
+                    !dense &&
+                    type === 'charger' &&
+                    u.chargeReady &&
+                    u.moving &&
+                    !reducedMotion.matches
+                ) {
                     const dust = Math.sin(t * 12 + u.id) * 4;
                     if (gpu) {
                         gpuDot(x - facing * (13 + dust), y + 2, 8, 2.3, dustTint, 0.44);
@@ -2274,8 +2859,20 @@
                         c.stroke();
                     }
                 }
-                const focusActor = !articulateAll && (u.windup > 0 || u.hit > 0.45 || u.braced) && rigStats.direct < 12;
-                drawAnimated(u, type, facing, x, y, scale, t, zoom >= 0.5 && (articulateAll || focusActor));
+                const focusActor =
+                    !articulateAll &&
+                    (u.windup > 0 || u.hit > 0.45 || u.braced) &&
+                    rigStats.direct < 12;
+                drawAnimated(
+                    u,
+                    type,
+                    facing,
+                    x,
+                    y,
+                    scale,
+                    t,
+                    zoom >= 0.5 && (articulateAll || focusActor),
+                );
                 if (!dense && u.hit > 0.1) {
                     if (gpu) gpuDot(x + 3, y - 13, 5, 3, hitTint, 0.53);
                     else oval(c, x + 3, y - 13, 5, 3, '#fff5bd87');
@@ -2287,7 +2884,19 @@
                     if (gpu) {
                         gpu.image(linePixel, 1, 1, 1, 1, lx, ly, 12, 1.8, 1, healthTrack);
                         if (health > 0)
-                            gpu.image(linePixel, 1, 1, 1, 1, lx, ly, health, 1.8, 1, healthTint[relativeSide(side)]);
+                            gpu.image(
+                                linePixel,
+                                1,
+                                1,
+                                1,
+                                1,
+                                lx,
+                                ly,
+                                health,
+                                1.8,
+                                1,
+                                healthTint[relativeSide(side)],
+                            );
                     } else {
                         c.fillStyle = '#38493a';
                         c.fillRect(lx, ly, 12, 1.8);
@@ -2303,7 +2912,10 @@
                         age = e.time - event.time;
                     if (age < 0 || age > 0.62 || !visible(base.x, base.y) || zoom < 0.4) continue;
                     const token = globalThis.MathCore?.ops?.[event.token]?.symbol ?? event.token;
-                    const label = token + (event.count > 1 ? ' 외 ' + (event.count - 1) + '개' : '') + ' 획득';
+                    const label =
+                        token +
+                        (event.count > 1 ? ' 외 ' + (event.count - 1) + '개' : '') +
+                        ' 획득';
                     const gas = event.mine === 'gas' || event.mine === 'centerGas';
                     c.save();
                     c.translate(base.x + (gas ? 23 : -23) / zoom, base.y * K - 20 - age * 25);
@@ -2346,13 +2958,19 @@
                 roleFx = 0;
             for (const f of b?.effects ?? [])
                 if (visible(f.x, f.y)) {
-                    if (f.kind === 'summon' || f.kind === 'bonus' || combatFx?.owns(f.kind)) continue;
+                    if (f.kind === 'summon' || f.kind === 'bonus' || combatFx?.owns(f.kind))
+                        continue;
                     if (f.kind === 'towerDestroy') {
                         drawTowerCollapse(f);
                         continue;
                     }
-                    if (dense && (f.kind === 'hit' || f.kind === 'death') && ++smallFx > 28) continue;
-                    if ((f.kind === 'charge' || f.kind === 'brace' || f.kind === 'block') && ++roleFx > 15) continue;
+                    if (dense && (f.kind === 'hit' || f.kind === 'death') && ++smallFx > 28)
+                        continue;
+                    if (
+                        (f.kind === 'charge' || f.kind === 'brace' || f.kind === 'block') &&
+                        ++roleFx > 15
+                    )
+                        continue;
                     drawEffect(f);
                 }
             combatFx?.draw(c, b, {
@@ -2387,28 +3005,66 @@
                 }
                 if (n.kind === 'unit' && obj.giantKind && mode !== 'overview') {
                     const y = obj.y * K - 151;
-                    if (Math.abs(obj.x - cx) * zoom < viewW / 2 && y > screenTop + 16 / zoom && y < screenBottom - 22 / zoom)
-                        tag(obj.x, y, Battle.giants[obj.giantKind].name, obj.side, obj.hp / obj.maxHp);
+                    if (
+                        Math.abs(obj.x - cx) * zoom < viewW / 2 &&
+                        y > screenTop + 16 / zoom &&
+                        y < screenBottom - 22 / zoom
+                    )
+                        tag(
+                            obj.x,
+                            y,
+                            Battle.giants[obj.giantKind].name,
+                            obj.side,
+                            obj.hp / obj.maxHp,
+                        );
                 }
             }
             const captureShown = updateCaptureCard(s.station, t);
             if (s.station) {
                 const place = s.station;
-                const showTags = mode === 'overview' || mode === 'routes' || mode === 'supply' || zoom >= 0.42;
-                const bridgeY = 801*K;
+                const showTags =
+                    ['overview', 'routes', 'route-cue', 'supply'].includes(mode) || zoom >= 0.42;
+                const bridgeY = 801 * K;
                 const altarY = place.y * K + (place.giantKind ? 31 : -8);
-                if (!captureShown && showTags && visible(place.x,place.y) && altarY > screenTop+16/zoom && altarY < screenBottom-40/zoom) {
+                if (
+                    !captureShown &&
+                    showTags &&
+                    visible(place.x, place.y) &&
+                    altarY > screenTop + 16 / zoom &&
+                    altarY < screenBottom - 40 / zoom
+                ) {
                     const name = Battle.giants?.[place.giantKind]?.name;
-                    const label = name ? name + (place.claimant >= 0 ? ' · 합류 중' : ' · 중립') : '거인 제단';
-                    tag(place.x, altarY, label, place.claimant, place.claimant >= 0 ? place.progress : undefined);
+                    const label = name
+                        ? name + (place.claimant >= 0 ? ' · 합류 중' : ' · 중립')
+                        : '거인 제단';
+                    tag(
+                        place.x,
+                        altarY,
+                        label,
+                        place.claimant,
+                        place.claimant >= 0 ? place.progress : undefined,
+                    );
                 }
                 const tightCapture = captureShown && mode === 'supply' && viewH <= 295;
-                if (!tightCapture && showTags && visible(1500,900) && bridgeY > screenTop+10/zoom && bridgeY < screenBottom-50/zoom) {
-                    const y = mode === 'supply' && viewW<650 ? Math.max(bridgeY,screenTop+67/zoom) : bridgeY;
-                    tag(1500,y,'중앙 다리',-1);
+                if (
+                    !tightCapture &&
+                    showTags &&
+                    visible(1500, 900) &&
+                    bridgeY > screenTop + 10 / zoom &&
+                    bridgeY < screenBottom - 50 / zoom
+                ) {
+                    const labelClearance = mode === 'route-cue' ? 54 : mode === 'supply' ? 67 : 0;
+                    const y =
+                        labelClearance && viewW < 650
+                            ? Math.max(bridgeY, screenTop + labelClearance / zoom)
+                            : bridgeY;
+                    tag(1500, y, '중앙 다리', -1);
                 }
             }
-            for (const launch of launches) if (launch) drawLaunchCaption(launch);
+            for (const launch of launches) {
+                if (launch && (launch.side !== localSide || scene.routeCue?.state !== 'dispatched'))
+                    drawLaunchCaption(launch);
+            }
             if (miniAt < 0 || clock - miniAt > 0.12) {
                 drawMini(b, s);
                 miniAt = clock;
@@ -2424,12 +3080,17 @@
             battle: () => navigate('battle'),
             overview: () => navigate('overview'),
             supply: () => navigate('supply'),
-            followSupplyDeployment() {
+            route(route) {
+                if (Object.hasOwn(Battle.routes, route)) navigate('route-cue');
+            },
+            followDeployment(route) {
                 if (mode === 'manual' || mode === 'overview' || mode === 'home') return;
-                convoyUnit = scene.battle?.units.findLast(u=>u.side===localSide && u.route==='supply' && u.hp>0);
+                convoyUnit = scene.battle?.units.findLast(
+                    (u) => u.side === localSide && u.route === route && !u.giantKind && u.hp > 0,
+                );
                 if (convoyUnit) {
                     setMode('convoy');
-                    frameConvoy(true,0);
+                    frameConvoy(true, 0);
                 }
             },
             followFirstDeployment() {
@@ -2437,7 +3098,6 @@
                 openingViewAvailable = false;
             },
             zoom: setZoom,
-            canShowLaunch,
             get renderStats() {
                 return renderStats;
             },
@@ -2463,5 +3123,10 @@
             },
         };
     }
-    globalThis.NumoriWorld = { mount, portrait, giantPortrait, usesActorSheet: () => !!actorSheets() };
+    globalThis.NumoriWorld = {
+        mount,
+        portrait,
+        giantPortrait,
+        usesActorSheet: () => !!actorSheets(),
+    };
 })();

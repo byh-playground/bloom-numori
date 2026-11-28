@@ -4,7 +4,7 @@ from os import environ
 import re
 from playwright.sync_api import expect, sync_playwright
 
-from two_fronts import type_tree
+from two_fronts import choose_route, type_tree
 
 QA = Path(__file__).resolve().parent
 GAME = (QA.parent / "numori-beta.html").as_uri() + "?debug=1&seed=123"
@@ -36,14 +36,13 @@ def run(browser, name, width, height, touch):
         if dest := environ.get("NUMORI_QA_SHOTS"):
             page.screenshot(path=Path(dest) / f"{name}-{stage}.png")
 
-    def dispatch(count):
+    def dispatch(count, awaiting_route=False):
         assert text(".ne-dispatch-count").replace(" ", "") == f"{count}마리"
-        bridge=page.locator('[data-action="produce"]')
-        lower=page.locator('[data-action="produce-supply"]')
-        labels=([bridge.get_attribute('aria-label'),lower.get_attribute('aria-label')]
-                if lower.is_visible() else [text('[data-action="produce"] .ne-produce-label')])
-        assert all(re.search(rf"(?<!\d){count}\s*마리", label or '') for label in labels), labels
-        assert bridge.is_enabled() == (count > 0)
+        launch=page.locator('[data-action="produce"]')
+        enabled=count > 0 and not awaiting_route
+        assert launch.is_enabled() == enabled
+        if enabled:
+            assert re.search(rf"(?<!\d){count}\s*마리", launch.inner_text()), launch.inner_text()
 
     def scoreboard_fits():
         clipped = page.evaluate("""() => {
@@ -280,30 +279,33 @@ def run(browser, name, width, height, touch):
     }""")
     shot("rotated")
 
-    # Calculate the next formula before selecting a route. Battlefield inspection
-    # must leave the computed draft intact until a route-specific order is sent.
-    lower=page.locator('[data-action="produce-supply"]')
-    assert lower.count()==0 or not lower.is_visible() or not lower.is_enabled()
+    # Calculate, change the selected route, then confirm without re-entering the formula.
+    launch=page.locator('[data-action="produce"]')
+    assert launch.is_disabled()
     witness=page.evaluate("Numori.economy.summonHint(0,{})")
     assert witness
     type_tree(press,witness)
-    dispatch(24)
+    dispatch(24, awaiting_route=True)
     draft=page.evaluate("JSON.stringify(Numori.editor.ast())")
-    press('[data-route="supply"]')
-    press('[data-route="bridge"]')
+    produced="Numori.economy.sides[0].stats.produced"
+    before_choice=page.evaluate(produced)
+    page.keyboard.press("Enter")
+    assert before_choice==page.evaluate(produced)
+    choose_route(page, press, 'bridge')
+    choose_route(page, press, 'supply')
     assert draft==page.evaluate("JSON.stringify(Numori.editor.ast())")
-    assert lower.is_visible() and lower.is_enabled()
-    for selector in ('[data-action="produce"]','[data-action="produce-supply"]'):
+    dispatch(24)
+    for selector in ('[data-action="produce"]','[data-route="bridge"]','[data-route="supply"]'):
         box=page.locator(selector).bounding_box()
         assert box and 0<=box['x'] and box['x']+box['width']<=width+1 and box['y']+box['height']<=height+1,box
     shot("choose-route")
     if touch:
-        press('[data-action="produce-supply"]')
+        produce()
     else:
-        lower.focus()
+        launch.focus()
         page.keyboard.press("Enter")
     assert page.evaluate("Numori.economy.sides[0].stats.byRoute.supply") == 24
-    assert lower.count()==0 or not lower.is_visible() or not lower.is_enabled()
+    assert launch.is_disabled()
 
     # A separate match proves that recruiting a giant never changes the hand or worker roster.
     assert page.evaluate("""() => {

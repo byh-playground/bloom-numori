@@ -1,1 +1,1 @@
-globalThis.NumoriVersion = '0.17.1';
+globalThis.NumoriVersion = '0.17.2';

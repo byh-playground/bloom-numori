@@ -3,7 +3,8 @@
     const escapeHtml = (value) =>
         String(value ?? '').replace(
             /[&<>"']/g,
-            (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
+            (char) =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
         );
     function decimalText(value) {
         if (!Number.isFinite(value)) return '—';
@@ -13,7 +14,9 @@
     }
     function resultText(result) {
         const text = decimalText(result.value);
-        return result.exact && Number.isSafeInteger(result.value) && !MathCore.matches(result, result.value)
+        return result.exact &&
+            Number.isSafeInteger(result.value) &&
+            !MathCore.matches(result, result.value)
             ? '≈ ' + text
             : text;
     }
@@ -44,7 +47,8 @@
         const used = {};
         for (const node of nodes) {
             if (!node) continue;
-            for (const [key, amount] of Object.entries(MathCore.cost(node))) used[key] = (used[key] || 0) + amount;
+            for (const [key, amount] of Object.entries(MathCore.cost(node)))
+                used[key] = (used[key] || 0) + amount;
         }
         return used;
     }
@@ -59,6 +63,7 @@
             destroyed = false;
         let notice = '';
         let lastPortrait = '';
+        let lastSelectable = null;
         const cache = new Map();
         const M = globalThis.MathCore;
         element.classList.add('numori-editor');
@@ -82,7 +87,7 @@
         <div class="ne-section"><div class="ne-heading"><span class="ne-group">숫자 블록</span></div><div class="ne-numbers"></div></div>
         <div class="ne-section"><div class="ne-heading"><span class="ne-group">연산 블록</span></div><div class="ne-operators ne-basic-operators"></div></div>
       </div>
-      <div class="ne-deploy"><div class="ne-preview"></div><div class="ne-launch-options" role="group" aria-label="출격 전선 선택"><button type="button" data-action="produce" data-dispatch-route="bridge" class="ne-produce"><b aria-hidden="true">=</b><span class="ne-produce-label">병력 소환</span><small class="ne-equals"></small></button><button type="button" data-action="produce-supply" data-dispatch-route="supply" class="ne-produce" hidden><span>거인 전선</span><small>출격</small></button></div><div class="ne-notice" role="status"></div></div></div>
+      <div class="ne-deploy"><div class="ne-preview"></div><button type="button" data-action="produce" class="ne-produce"><b class="ne-produce-arrow" aria-hidden="true">=</b><span class="ne-produce-label">출격 대기</span><small class="ne-produce-detail"></small></button><div class="ne-notice" role="status"></div></div></div>
       <div class="ne-foot" hidden><div class="ne-context"></div><div class="ne-shelf" role="group" aria-label="보관한 식"></div><div class="ne-actions"></div></div>`;
         const find = (selector) => element.querySelector(selector);
         const write = (selector, html) => {
@@ -93,6 +98,11 @@
         const rootPath = () => state.selected ?? nextHole(state.root);
         const reservations = () => sumCosts([state.root, ...state.stored]);
         const otherCosts = () => sumCosts(state.stored);
+        const firstDispatch = () => options.firstDispatch?.() ?? true;
+        const dispatchRoute = () =>
+            firstDispatch() ? 'bridge' : (options.selectedRoute?.() ?? null);
+        const routeName = (route) =>
+            options.routeName?.(route) ?? (route === 'supply' ? '거인 전선' : '중앙 다리');
         const snapshot = () => {
             history.push({ ...state, stored: state.stored.slice() });
             if (history.length > 80) history.shift();
@@ -109,7 +119,9 @@
         function canPay(nodeList) {
             const counts = options.inventory() || {};
             if (nodeList.some((node) => node && !Object.keys(M.cost(node)).length)) return false;
-            return Object.entries(sumCosts(nodeList)).every(([key, amount]) => amount <= (counts[key] || 0));
+            return Object.entries(sumCosts(nodeList)).every(
+                ([key, amount]) => amount <= (counts[key] || 0),
+            );
         }
         function putNumber(key) {
             const path = rootPath();
@@ -160,15 +172,18 @@
             return globalThis.Battle?.types?.[preview?.unitType]?.name || '병력';
         }
         function summonReceipt(outcome) {
-            const multiplier = options.troopMultiplier?.() ?? globalThis.Economy?.config?.troopMultiplier ?? 3;
-            const bonus = outcome.matched ? ` · 목표 ${decimalText(outcome.target)} 달성 (${multiplier}배)` : '';
-            const destination = outcome.route === 'supply' ? '거인 전선으로' : '중앙 다리로';
-            return `${destination} ${unitName(outcome)} ${decimalText(outcome.actual)}마리 출격${bonus}`;
+            const multiplier =
+                options.troopMultiplier?.() ?? globalThis.Economy?.config?.troopMultiplier ?? 3;
+            const bonus = outcome.matched
+                ? ` · 목표 ${decimalText(outcome.target)} 달성 (${multiplier}배)`
+                : '';
+            return `${routeName(outcome.route)} · ${unitName(outcome)} ${decimalText(outcome.actual)}마리 출격${bonus}`;
         }
         async function action(name) {
-            if (name === 'produce' || name === 'produce-supply') {
-                if (!state.root) return;
-                let outcome = options.produce(state.root, otherCosts(), name === 'produce-supply' ? 'supply' : 'bridge');
+            if (name === 'produce') {
+                const route = dispatchRoute();
+                if (!state.root || !route) return;
+                let outcome = options.produce(state.root, otherCosts(), route);
                 if (outcome && typeof outcome.then === 'function') {
                     awaitingHost = true;
                     element.setAttribute('aria-busy', 'true');
@@ -231,7 +246,9 @@
                     html = child(i);
                 if (n?.type !== 'op') return html;
                 const inner = M.ops[n.id].precedence;
-                return inner < op.precedence || (inner === op.precedence && i === 1) ? '(' + html + ')' : html;
+                return inner < op.precedence || (inner === op.precedence && i === 1)
+                    ? '(' + html + ')'
+                    : html;
             };
             if (node.id === 'div')
                 return `<span class="ne-frac"><span>${child(0, '분자')}</span><button type="button" data-path="${path}" class="ne-bar${selected ? ' is-selected' : ''}" aria-label="나눗셈 교체"></button><span>${child(1, '분모')}</span></span>`;
@@ -247,20 +264,31 @@
             const delta = complete && Number.isFinite(target) ? target - result.value : 0;
             const valid = !!preview?.ok;
             const base = globalThis.Economy?.config?.baseBatch ?? 8;
-            const multiplier = options.troopMultiplier?.() ?? globalThis.Economy?.config?.troopMultiplier ?? 3;
+            const multiplier =
+                options.troopMultiplier?.() ?? globalThis.Economy?.config?.troopMultiplier ?? 3;
             const maximum = base * multiplier;
             const range = Economy.summonRange(target);
             const hasTarget = range !== null;
             const qualified = complete && hasTarget && preview?.matched;
             write('.ne-goal', hasTarget ? escapeHtml(decimalText(target)) : '—');
-            const band = hasTarget ? `${decimalText(range.min)}~${decimalText(range.max)} 출격` : '';
+            const band = hasTarget
+                ? `${decimalText(range.min)}~${decimalText(range.max)} 출격`
+                : '';
             const near = base * (globalThis.Economy?.config?.nearMultiplier ?? 2);
             const actual = valid ? preview.actual : 0;
-            const first = options.firstDispatch?.() ?? true;
-            const chooseRoute = !first && (valid || awaitingHost);
-            write('.ne-dispatch-label', first ? '중앙 다리 출격' : '출격 병력');
+            const selectable = !firstDispatch() && valid;
+            if (lastSelectable !== selectable) {
+                lastSelectable = selectable;
+                options.selectable?.(selectable);
+            }
+            const route = dispatchRoute();
+            const destination = route ? routeName(route) : '';
+            const awaitingRoute = valid && !route;
+            write('.ne-dispatch-label', valid && route ? escapeHtml(destination) : '출격 병력');
             write('.ne-dispatch-count', decimalText(actual) + '마리');
-            find('.ne-dispatch-cell').classList.toggle('ready', actual > 0);
+            const dispatch = find('.ne-dispatch-cell');
+            dispatch.classList.toggle('ready', actual > 0);
+            dispatch.dataset.destination = valid ? (route ?? '') : '';
             const tiers = [
                 ['차이 2', base],
                 ['차이 1', near],
@@ -271,12 +299,14 @@
                   escapeHtml(band) +
                   '</span><span class="ne-tiers">' +
                   tiers
-                      .map(([key, count]) => `<span><small>${key}</small> <b>${decimalText(count)}마리</b></span>`)
+                      .map(
+                          ([key, count]) =>
+                              `<span><small>${key}</small> <b>${decimalText(count)}마리</b></span>`,
+                      )
                       .join('') +
                   '</span>'
                 : '다음 목표를 기다리는 중';
             let difference = '';
-            const label = chooseRoute ? '중앙 다리' : valid ? `${unitName(preview)} ${actual}마리 출격` : '출격 불가 · 0마리';
             if (complete && hasTarget) {
                 if (valid) {
                     const tier = qualified ? '목표 일치' : `차이 ${Math.abs(delta)}`;
@@ -290,7 +320,6 @@
                 } else if (!preview?.unitType) difference = '양의 정수로 완성하세요';
                 else difference = preview?.reason || '출격 대기';
             }
-            write('.ne-produce-label', escapeHtml(label));
             write('.ne-delta', escapeHtml(difference));
             const showUnit = !!preview?.unitType && complete && result.value > 0;
             find('.ne-unit').hidden = !showUnit;
@@ -311,7 +340,10 @@
             find('[data-action="new"]').disabled = !state.root;
             find('[data-action="undo"]').disabled = !history.length;
             find('[data-action="clear"]').disabled = !state.root && !state.stored.length;
-            write('.ne-expression', state.root ? tile(state.root) : '<span class="ne-placeholder">숫자 선택</span>');
+            write(
+                '.ne-expression',
+                state.root ? tile(state.root) : '<span class="ne-placeholder">숫자 선택</span>',
+            );
             write('.ne-result', complete ? escapeHtml(resultText(result)) : '—');
             const selected = state.selected !== null && subtree(state.root, state.selected);
             const incompleteAt = nextHole(state.root);
@@ -319,7 +351,8 @@
             if (selected) prompt = '교체할 블록을 선택하세요';
             else if (state.root && incompleteAt !== null) prompt = '숫자 블록을 선택하세요';
             write('.ne-context', prompt);
-            const toolButton = (key, label) => `<button type="button" data-action="${key}">${label}</button>`;
+            const toolButton = (key, label) =>
+                `<button type="button" data-action="${key}">${label}</button>`;
             write(
                 '.ne-actions',
                 selected
@@ -371,21 +404,33 @@
                     ? `예상 ${decimalText(preview.raw)}마리 중 병력 상한 초과로 <b>${decimalText(waste)}마리 소멸</b>`
                     : '',
             );
-            const bridge = find('[data-dispatch-route="bridge"]');
-            const supply = find('[data-dispatch-route="supply"]');
-            find('.ne-launch-options').toggleAttribute('data-split', chooseRoute);
-            bridge.disabled = !valid || awaitingHost || options.active?.() === false;
-            supply.disabled = !chooseRoute || bridge.disabled;
-            supply.hidden = !chooseRoute;
-            if (awaitingHost && !chooseRoute) write('.ne-produce-label', '출격 확인 중');
-            write('.ne-equals', chooseRoute ? '출격' : (first ? '중앙 다리 · ' : '') + '등호 ' + (inventory['='] || 0) + '개');
-            if (valid) {
-                const orders = unitName(preview) + ' ' + actual + '마리 출격';
-                bridge.setAttribute('aria-label', '중앙 다리로 ' + orders);
-                supply.setAttribute('aria-label', '거인 전선으로 ' + orders);
+            const launch = find('[data-action="produce"]');
+            launch.disabled = !valid || !route || awaitingHost || options.active?.() === false;
+            launch.dataset.destination = valid ? (route ?? '') : '';
+            launch.toggleAttribute('data-awaiting-route', awaitingRoute);
+            write(
+                '.ne-produce-arrow',
+                valid ? (route === 'supply' ? '↓' : route ? '↑' : '↗') : '=',
+            );
+            write(
+                '.ne-produce-label',
+                valid ? escapeHtml(destination || '전선 선택') : '출격 대기',
+            );
+            write(
+                '.ne-produce-detail',
+                awaitingHost
+                    ? '출격 확인 중'
+                    : valid
+                      ? `${decimalText(actual)}마리 출격${route ? '' : ' 대기'}`
+                      : '등호 ' + (inventory['='] || 0) + '개',
+            );
+            if (valid && route) {
+                launch.setAttribute(
+                    'aria-label',
+                    `${destination} · ${unitName(preview)} ${decimalText(actual)}마리 출격`,
+                );
             } else {
-                bridge.removeAttribute('aria-label');
-                supply.removeAttribute('aria-label');
+                launch.removeAttribute('aria-label');
             }
             const message =
                 notice ||
@@ -398,7 +443,14 @@
         }
         function clicked(event) {
             const b = event.target.closest('button');
-            if (awaitingHost || !b || b.disabled || !element.contains(b) || options.active?.() === false) return;
+            if (
+                awaitingHost ||
+                !b ||
+                b.disabled ||
+                !element.contains(b) ||
+                options.active?.() === false
+            )
+                return;
             const data = b.dataset;
             notice = '';
             const oldRoot = state.root,
