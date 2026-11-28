@@ -23,28 +23,30 @@
         },
         mineralWeights: Object.fromEntries(MathCore.numbers.map((digit) => [digit, 1])),
         ai: {
-            easy: { interval: 16, budget: 14, depth: 1 },
+            easy: { cards: 2, cardSeconds: 0.54, recovery: 11.6, counterWeight: 0.15 },
             normal: {
-                interval: 10,
-                budget: 65,
-                depth: 2,
+                cards: 3,
+                cardSeconds: 0.43,
+                recovery: 6.8,
+                counterWeight: 0.35,
             },
             hard: {
-                interval: 7,
-                budget: 130,
-                depth: 3,
+                cards: 4,
+                cardSeconds: 0.35,
+                recovery: 4.2,
+                counterWeight: 0.65,
             },
         },
     };
+    const AI_SIDE = 1;
+    const HAND_KEYS = [...MathCore.numbers, ...BASIC, '='];
+    const AI_RECEIPT_SECONDS = 1.8;
 
     function seeded(seed) {
         const rng = new NumoriGameKit.SeededPRNG(seed >>> 0);
         return () => rng.nextUint32() / 4294967296;
     }
 
-    function pick(items, rng) {
-        return items[Math.floor(rng() * items.length)];
-    }
     function weighted(weights, rng) {
         const entries = Object.entries(weights);
         let roll = rng() * entries.reduce((sum, entry) => sum + entry[1], 0);
@@ -169,31 +171,6 @@
         return plan;
     }
 
-    // Samples without replacement within each tree, including its operator blocks.
-    function sampleTree(inventory, depth, rng) {
-        const M = globalThis.MathCore;
-        const stock = { ...inventory };
-        const available = (keys) => keys.filter((k) => stock[k] > 0);
-        const take = (key) => {
-            stock[key]--;
-            return key;
-        };
-        const leaf = () => {
-            const key = pick(available(M.numbers), rng);
-            return key === undefined ? null : M.num(take(key));
-        };
-        function branch(level) {
-            if (level <= 0) return leaf();
-            const id = pick(available(BASIC), rng);
-            if (!id) return leaf();
-            take(id);
-            const left = branch(level - 1);
-            if (!left) return null;
-            const right = level > 1 && rng() < 0.3 ? branch(level - 1) : leaf();
-            return right && M.op(id, left, right);
-        }
-        return branch(depth);
-    }
     const availableInventory = (bag, reserved) =>
         Object.fromEntries(Object.entries(bag).map(([key, n]) => [key, n - (reserved[key] || 0)]));
 
@@ -257,6 +234,11 @@
     }
 
     class Economy {
+        #aiView = null;
+        #aiDraft = null;
+        #lastAIInput = '';
+        #lastAILaunch = -Infinity;
+
         constructor({
             seed = 1,
             difficulty = 'normal',
@@ -295,7 +277,6 @@
             this.difficulty = difficulty in this.config.ai ? difficulty : 'normal';
             this.computerOpponent = computerOpponent;
             this.ai = this.config.ai[this.difficulty];
-            this.nextDecision = Infinity;
             this.time = 0;
             this.bases = battle.bases;
             this.mines = this.bases.map((base, side) => {
@@ -327,6 +308,10 @@
                 }
                 this.refreshTarget(side, {});
             });
+            if (computerOpponent) this.#waitAI('opening');
+        }
+        get aiWork() {
+            return this.#aiView;
         }
         allocation(side) {
             const result = { mineral: 0, gas: 0, idle: 0 };
@@ -559,7 +544,6 @@
                         ? globalThis.MathCore.format(ast) + ' = ' + p.target
                         : null,
             });
-            if (opening && side === 0 && this.computerOpponent) this.nextDecision = this.time;
             stats.firstProduction ??= this.time;
             stats.firstRoute ??= route;
             stats.produced += p.actual;
@@ -611,80 +595,188 @@
             if (onTheWay || stats.byRoute.supply >= stats.byRoute.bridge * 0.65) return 'bridge';
             return 'supply';
         }
-        decisions(side = 1) {
+        decisions(
+            side = AI_SIDE,
+            stock = availableInventory(this.sides[side].inventory, this.reservations(side)),
+        ) {
             this.staffMines(side);
-            const s = this.sides[side],
-                ai = this.ai,
-                M = globalThis.MathCore;
             const army = this.battle.count(side),
                 room = this.config.armyLimit - army;
-            const goal = s.targets.summon,
+            const goal = this.sides[side].targets.summon,
                 range = summonRange(goal);
-            if (!s.inventory['='] || room <= 0 || !range) return null;
-            const enemy = this.battle.counts?.[1 - side] || {},
-                friendly = this.battle.counts?.[side] || {};
-            const countersEnabled = this.difficulty === 'hard';
+            if (!(stock['='] > 0) || room <= 0 || !range) return null;
+            const enemy = this.battle.counts[1 - side],
+                friendly = this.battle.counts[side];
+            const enemyArmy = Math.max(1, this.battle.count(1 - side));
             const weights = Object.fromEntries(
                 TYPES.map((type) => {
-                    const balance =
-                        1 / (1 + (friendly[type] || 0) / Math.max(2, army / TYPES.length));
+                    const balance = 1 / (1 + friendly[type] / Math.max(2, army / TYPES.length));
                     const enemyCount = Battle.roles[type].strongAgainst.reduce(
-                        (sum, counter) => sum + (enemy[counter] || 0),
+                        (sum, counter) => sum + enemy[counter],
                         0,
                     );
                     return [
                         type,
-                        1 +
-                            balance * 0.4 +
-                            this.rng() * 0.15 +
-                            (countersEnabled
-                                ? (enemyCount / Math.max(1, this.battle.count(1 - side))) * 0.6
-                                : 0),
+                        1 + balance * 0.2 + (enemyCount / enemyArmy) * this.ai.counterWeight,
                     ];
                 }),
             );
-            let best = null;
-            const score = (ast, r) => {
-                if (!positiveInteger(r) || r.value < range.min || r.value > range.max) return;
-                const cost = Object.entries(r.cost).reduce(
-                    (a, [k, n]) => a + n + (M.ops[k] && s.inventory[k] <= 1 ? 1 : 0),
+            const rank = (_, result) => {
+                const classification = classify(result);
+                const plan = troopPlan(result, classification, goal, range, this.config);
+                const actual = Math.min(room, plan.raw);
+                const cost = Object.entries(result.cost).reduce(
+                    (sum, [key, count]) => sum + count * (1 + 0.6 / stock[key]),
                     0,
                 );
-                const classification = classify(r);
-                const plan = troopPlan(r, classification, goal, range, this.config);
-                const actual = Math.min(room, plan.raw);
-                const points =
+                return (
                     weights[classification.unitType] * actual -
                     (plan.raw - actual) * 0.25 +
-                    (plan.matched ? 5 : 0);
-                const net = points - cost * 0.9;
-                if (!best || net > best.points) best = { type: 'summon', ast, points: net };
-            };
-            for (const c of [...basicCandidates(s.inventory, this.rng, ai.budget)])
-                score(c.ast, c.r);
-            for (let i = 0; i < ai.budget; i++) {
-                const tree = sampleTree(
-                    s.inventory,
-                    1 + Math.floor(this.rng() * ai.depth),
-                    this.rng,
+                    (plan.matched ? 5 : 0) -
+                    cost
                 );
-                if (tree) score(tree, M.evaluate(tree));
+            };
+            // Goals come from up to three digits. Easy prefers fewer cards, but may try a
+            // longer draft when its preferred hand size yields no usable move.
+            const opening = this.sides[side].stats.firstProduction === null;
+            const cards = opening ? 3 : this.ai.cards;
+            const solver = globalThis.NumoriAISolver;
+            let solution = solver.solve(stock, goal, { cards }, rank);
+            if (!solution && cards < 3) solution = solver.solve(stock, goal, { cards: 3 }, rank);
+            return solution && { type: 'summon', ast: solution.ast, points: solution.score };
+        }
+        #waitAI(reason) {
+            const target = this.sides[AI_SIDE].targets.summon ?? null;
+            if (
+                this.#aiView?.phase === 'waiting' &&
+                this.#aiView.reason === reason &&
+                this.#aiView.target === target
+            )
+                return;
+            this.#aiView = {
+                phase: 'waiting',
+                reason,
+                tokens: [],
+                revealed: 0,
+                target,
+                value: null,
+                route: null,
+                count: 0,
+                until: 0,
+            };
+        }
+        #writeAI(draft, revealed, phase, until, count = draft.count) {
+            this.#aiView = {
+                phase,
+                tokens: draft.tokens,
+                revealed,
+                target: draft.target,
+                value: revealed === draft.tokens.length ? draft.value : null,
+                route: draft.route,
+                count,
+                until,
+            };
+        }
+        #advanceDraft() {
+            const draft = this.#aiDraft;
+            const revealed = Math.min(
+                draft.tokens.length,
+                1 + Math.floor((this.time - draft.started + 1e-8) / draft.cardSeconds),
+            );
+            if (this.time + 1e-8 < draft.ready) {
+                if (this.#aiView.revealed !== revealed)
+                    this.#writeAI(draft, revealed, 'solving', draft.ready);
+                return;
             }
-            return best;
+            this.#aiDraft = null;
+            this.#lastAIInput = '';
+            const sameGoal = this.sides[AI_SIDE].targets.summon === draft.target;
+            const outcome =
+                sameGoal &&
+                this.produce(AI_SIDE, 'summon', draft.ast, this.reservations(AI_SIDE), draft.route);
+            if (!outcome?.ok) {
+                this.#waitAI(
+                    this.battle.count(AI_SIDE) >= this.config.armyLimit ? 'space' : 'resources',
+                );
+                return;
+            }
+            this.#lastAILaunch = this.time;
+            this.#writeAI(
+                draft,
+                draft.tokens.length,
+                'launched',
+                this.time + AI_RECEIPT_SECONDS,
+                outcome.actual,
+            );
+        }
+        #playAITurn() {
+            if (this.sides[0].stats.firstProduction === null) return;
+            if (this.#aiDraft) {
+                this.#advanceDraft();
+                return;
+            }
+            if (this.#aiView.phase === 'launched' && this.time < this.#aiView.until) return;
+            const cpu = this.sides[AI_SIDE];
+            const army = this.battle.count(AI_SIDE);
+            const room = this.config.armyLimit - army;
+            if (room <= 0) {
+                this.#waitAI('space');
+                return;
+            }
+            const underSiege = this.battle.threat[AI_SIDE];
+            const usualBatch = this.config.baseBatch * this.config.troopMultiplier;
+            const lead = (army - this.battle.count(0)) / Math.max(1, usualBatch * 2);
+            const tempo = underSiege ? 0.55 : Math.min(1.35, Math.max(0.7, 1 + 0.2 * lead));
+            if (this.time - this.#lastAILaunch < this.ai.recovery * tempo) {
+                this.#waitAI('tactics');
+                return;
+            }
+            const reserved = this.reservations(AI_SIDE);
+            const stock = availableInventory(cpu.inventory, reserved);
+            // Counts above the longest supported draft cannot make a blocked hand playable.
+            const signature = [
+                cpu.targets.summon,
+                Math.min(usualBatch, room),
+                ...HAND_KEYS.map((key) => Math.min(stock[key] || 0, key === '=' ? 1 : 4)),
+            ].join('/');
+            if (this.#lastAIInput === signature) {
+                this.#waitAI('resources');
+                return;
+            }
+            this.#lastAIInput = signature;
+            const choice = this.decisions(AI_SIDE, stock);
+            const preview = choice && this.preview(AI_SIDE, 'summon', choice.ast, reserved);
+            if (!preview?.ok) {
+                this.#waitAI('resources');
+                return;
+            }
+            const tokens = Object.freeze(
+                Array.from(MathCore.format(choice.ast).replaceAll(' ', '')),
+            );
+            const opening = cpu.stats.firstProduction === null;
+            const cardSeconds = opening ? 0.16 : this.ai.cardSeconds;
+            const hold = opening ? 0.22 : 0.62;
+            const ready = this.time + (tokens.length - 1) * cardSeconds + hold;
+            const draft = {
+                ast: choice.ast,
+                tokens,
+                target: preview.target,
+                value: preview.value,
+                count: preview.actual,
+                route: this.chooseRoute(AI_SIDE),
+                started: this.time,
+                cardSeconds,
+                ready,
+            };
+            this.#aiDraft = draft;
+            this.#writeAI(draft, 1, 'solving', ready);
         }
         tick(dt) {
             if (!(dt > 0) || !Number.isFinite(dt) || this.battle.winner !== -1) return;
             this.time += dt;
             for (const side of this.sides)
                 for (const worker of side.workers) this.updateWorker(worker, dt);
-            if (this.computerOpponent && this.time >= this.nextDecision) {
-                this.nextDecision += this.ai.interval;
-                const cpu = this.sides[1];
-                const choice = cpu.stats.firstProduction === null ? null : this.decisions(1);
-                // A small search budget can miss a payable target the AI already holds.
-                const ast = choice?.ast ?? this.summonHint(1);
-                if (ast) this.produce(1, 'summon', ast, {}, this.chooseRoute(1));
-            }
+            if (this.computerOpponent) this.#playAITurn();
         }
     }
     Economy.config = Object.freeze(CONFIG);

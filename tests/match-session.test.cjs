@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 require('../vendor/gamekit-core.js');
 require('../math.js');
 require('../battle.js');
+require('../ai-solver.js');
 require('../economy.js');
 require('../match-session.js');
 
@@ -124,11 +125,13 @@ test('AI and PvP share simulation and authorization; both startup orders work', 
             assert.equal(opening.route, route);
             const cpu = solo.economy.sides[1];
             solo.step();
-            assert.equal(cpu.stats.byRoute[route], 24);
-            assert.equal(cpu.stats.spent['='], 1);
+            assert.equal(cpu.stats.byRoute[route], 0);
+            assert.equal(solo.economy.aiWork.phase, 'solving');
+            assert.equal(solo.economy.aiWork.route, route);
             const start = solo.battle.time;
             for (let i = 0; i < 150 && !solo.battle.stats.hits; i++) solo.step();
             assert.ok(solo.battle.stats.hits > 0 && solo.battle.stats.firstCombat - start < 5);
+            assert.equal(cpu.stats.byRoute[route], 24);
             assert.equal(cpu.stats.spent['='], 1);
         } finally {
             solo.close();
