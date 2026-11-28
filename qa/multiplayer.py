@@ -129,14 +129,14 @@ async def put_ast(page, ast, touch, shelf):
 async def summon(page, side, touch, route='bridge'):
     ast = await page.evaluate("s=>Numori.economy.summonHint(s,{})", side)
     assert ast, f'no payable exact opening on side {side}'
-    opening = await page.evaluate("s=>Numori.economy.sides[s].stats.firstProduction===null", side)
+    if route == 'supply':
+        selector = '[data-route="supply"]'
+        await press(page, selector, touch)
+        await expect(page.locator(selector)).to_have_attribute('aria-pressed', 'true')
     await put_ast(page, ast, touch, [])
     await expect(page.locator('.ne-dispatch-count')).to_have_text('24마리')
-    if not opening and route == 'supply':
-        await choose_route(page, route, touch)
-    expected_route = 'bridge' if opening else route
     await expect(page.locator('[data-action="produce"]')).to_have_attribute(
-        'data-destination', expected_route,
+        'data-destination', route,
     )
     await press(page, '[data-action="produce"]', touch)
 

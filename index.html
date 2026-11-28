@@ -134,13 +134,21 @@
                 </section>
                 <aside class="desk" aria-label="생산 작업대">
                     <div id="frontRoutes" role="group" aria-label="출격 전선">
-                        <button type="button" data-route="bridge" title="중앙 다리 보기">
+                        <button
+                            type="button"
+                            data-route="bridge"
+                            title="중앙 다리 선택"
+                            aria-pressed="true"
+                        >
                             <i class="front-bridge" aria-hidden="true"></i>
-                            <span
-                                ><b>중앙 다리</b><small id="bridgeOrder">첫 부대 출격</small></span
-                            >
+                            <span><b>중앙 다리</b><small>기본 전선</small></span>
                         </button>
-                        <button type="button" data-route="supply" title="거인 전선 보기" disabled>
+                        <button
+                            type="button"
+                            data-route="supply"
+                            title="거인 전선 선택"
+                            aria-pressed="false"
+                        >
                             <i class="front-giant" aria-hidden="true"></i>
                             <span><b>거인 전선</b><small id="giantName">중립 거인</small></span>
                             <span class="giant-status"
@@ -149,7 +157,7 @@
                             >
                         </button>
                     </div>
-                    <div id="editor"></div>
+                    <div id="editor" tabindex="-1"></div>
                     <div id="fieldToolsDock"></div>
                 </aside>
             </div>

@@ -63,7 +63,7 @@
             destroyed = false;
         let notice = '';
         let lastPortrait = '';
-        let lastSelectable = null;
+        let lastPayable = null;
         const cache = new Map();
         const M = globalThis.MathCore;
         element.classList.add('numori-editor');
@@ -98,7 +98,6 @@
         const rootPath = () => state.selected ?? nextHole(state.root);
         const reservations = () => sumCosts([state.root, ...state.stored]);
         const otherCosts = () => sumCosts(state.stored);
-        const firstDispatch = () => options.firstDispatch?.() ?? true;
         const dispatchRoute = () => options.selectedRoute?.() ?? 'bridge';
         const routeName = (route) =>
             options.routeName?.(route) ?? (route === 'supply' ? '거인 전선' : '중앙 다리');
@@ -275,10 +274,9 @@
                 : '';
             const near = base * (globalThis.Economy?.config?.nearMultiplier ?? 2);
             const actual = valid ? preview.actual : 0;
-            const selectable = !firstDispatch() && valid;
-            if (lastSelectable !== selectable) {
-                lastSelectable = selectable;
-                options.selectable?.(selectable);
+            if (lastPayable !== valid) {
+                lastPayable = valid;
+                options.payable?.(valid);
             }
             const route = dispatchRoute();
             const destination = routeName(route);

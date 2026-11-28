@@ -22,7 +22,8 @@ function pair(seed = 123) {
             },
             onStart: () => starts.push(role),
             onFailure: (reason) => errors.push([role, reason]),
-            onProduce: (side, ast, outcome) => receipts.push([role, side, MathCore.format(ast), outcome.actual]),
+            onProduce: (side, ast, outcome) =>
+                receipts.push([role, side, MathCore.format(ast), outcome.actual]),
         });
     const host = make('host'),
         guest = make('guest');
@@ -62,7 +63,18 @@ function snapshot(m) {
     return {
         tick: b.tick,
         winner: b.winner,
-        units: b.units.map((u) => [u.id, u.type, u.giantKind, u.side, u.route, u.waypoint, u.x, u.y, u.hp, u.target?.id]),
+        units: b.units.map((u) => [
+            u.id,
+            u.type,
+            u.giantKind,
+            u.side,
+            u.route,
+            u.waypoint,
+            u.x,
+            u.y,
+            u.hp,
+            u.target?.id,
+        ]),
         counts: b.counts,
         bases: b.bases.map((o) => o.hp),
         towers: b.towers.map((side) => [side.bridge.hp, side.supply.hp]),
@@ -98,23 +110,30 @@ test('AI and PvP share simulation and authorization; both startup orders work', 
             p.close();
         }
     }
-    const solo = NumoriMatch.create({ role: 'solo', seed: 123 });
-    solo.open();
-    for (let i = 0; i < 1800; i++) solo.step();
-    assert.equal(solo.economy.sides[1].stats.produced, 0);
-    assert.equal(solo.produce(MathCore.num(1), {}).ok, false);
-    solo.step();
-    assert.equal(solo.economy.sides[1].stats.produced, 0);
-    assert.equal(solo.produce(exact(solo, 0), {}).actual, 24);
-    const cpu = solo.economy.sides[1];
-    solo.step();
-    assert.equal(cpu.stats.produced, 24);
-    assert.equal(cpu.stats.spent['='], 1);
-    const start = solo.battle.time;
-    for (let i = 0; i < 150 && !solo.battle.stats.hits; i++) solo.step();
-    assert.ok(solo.battle.stats.hits > 0 && solo.battle.stats.firstCombat - start < 5);
-    assert.equal(cpu.stats.spent['='], 1);
-    solo.close();
+    for (const route of ['bridge', 'supply']) {
+        const solo = NumoriMatch.create({ role: 'solo', seed: 123 });
+        try {
+            solo.open();
+            for (let i = 0; i < 1800; i++) solo.step();
+            assert.equal(solo.economy.sides[1].stats.produced, 0);
+            assert.equal(solo.produce(MathCore.num(1), {}, route).ok, false);
+            solo.step();
+            assert.equal(solo.economy.sides[1].stats.produced, 0);
+            const opening = solo.produce(exact(solo, 0), {}, route);
+            assert.equal(opening.actual, 24);
+            assert.equal(opening.route, route);
+            const cpu = solo.economy.sides[1];
+            solo.step();
+            assert.equal(cpu.stats.byRoute[route], 24);
+            assert.equal(cpu.stats.spent['='], 1);
+            const start = solo.battle.time;
+            for (let i = 0; i < 150 && !solo.battle.stats.hits; i++) solo.step();
+            assert.ok(solo.battle.stats.hits > 0 && solo.battle.stats.firstCombat - start < 5);
+            assert.equal(cpu.stats.spent['='], 1);
+        } finally {
+            solo.close();
+        }
+    }
 });
 
 test('same tick actions, stale targets and duplicate packets settle atomically', async () => {
@@ -166,7 +185,11 @@ test('guest recruits a giant on the lower lane and both peers agree on its kind 
         assert.equal(p.guest.economy.sides[1].stats.produced, 0);
         const opening = p.guest.produce(exact(p.guest, 1), {}, 'supply');
         p.flush();
-        assert.equal((await opening).route, 'bridge');
+        assert.equal((await opening).route, 'supply');
+        assert.ok(
+            p.guest.battle.units.every((unit) => unit.route === 'supply' && unit.waypoint === 3),
+        );
+        assert.deepEqual(snapshot(p.host), snapshot(p.guest));
         p.host.produce(exact(p.host, 0));
         p.flush();
         p.run(240);
@@ -176,7 +199,7 @@ test('guest recruits a giant on the lower lane and both peers agree on its kind 
         for (let i = 0; i < 60 && !p.host.battle.station.recruits[1]; i++) p.run(30);
         assert.equal(p.host.battle.station.recruits[1], 1);
         assert.equal(p.host.battle.station.lastRecruit.side, 1);
-        const giant = p.host.battle.units.find(unit => unit.giantKind);
+        const giant = p.host.battle.units.find((unit) => unit.giantKind);
         assert.equal(giant.side, 1);
         assert.equal(giant.giantKind, p.host.battle.station.lastRecruit.giantKind);
         assert.deepEqual(snapshot(p.host), snapshot(p.guest));
